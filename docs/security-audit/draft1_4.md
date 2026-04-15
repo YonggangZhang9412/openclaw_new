@@ -1,32 +1,41 @@
 ## 4. Quantitative Analysis
 
-### 4.1 Attack surface reduction
+### 4.1 Attack surface reduction: a structural comparison
 
-Under ambient authority (OpenClaw model), the agent's instantaneous attack surface at any moment can be expressed as:
+Rather than attempting to assign precise numerical probabilities to inherently uncertain adversarial processes, we characterize attack surface reduction through **structural dimensionality analysis** — counting the independent barriers an attacker must overcome to complete an attack chain.
 
-```
-S_ambient = |T| × D × p(injection)
-```
+**Under ambient authority (OpenClaw model)**, a successful data exfiltration attack requires overcoming a single barrier: the LLM must be successfully manipulated through its data channel. Once this occurs, the attacker has access to the agent's full tool set (45+ tools), for an unbounded duration (session-level permissions do not expire), with no structural constraint on what combination of tools can be invoked.
 
-where |T| is the number of available tools (~45), D is the session duration (unbounded), and p(injection) is the probability that an adversarial input successfully manipulates the LLM. Since D → ∞ for persistent agents, the expected number of successful attacks over the agent's lifetime is unbounded for any p(injection) > 0.
-
-Under event-scoped capability authority (our model):
+The attack chain requires one successful step:
 
 ```
-S_capability = |T_token| × TTL × p(injection) × p(bypass_taint) × p(bypass_rule_of_two)
+Injection succeeds → Full tool access → Attack completes
 ```
 
-where |T_token| ≈ 2-5 (tools granted per event batch), TTL = 300s, p(bypass_taint) is the probability of evading both content-level and causal-level taint tracking, and p(bypass_rule_of_two) is the probability that an attack chain can complete despite the structural constraint.
+**Under event-scoped capability authority (our model)**, the same attack must overcome multiple independent structural barriers:
 
-Conservative estimates:
-- |T_token|/|T| ≈ 5/45 ≈ 0.11 (11% tool exposure)
-- TTL/D ≈ 300/∞ → 0 (asymptotic reduction; for a 24h session, 300/86400 ≈ 0.0035)
-- p(bypass_taint): Content-level evasion (LLM paraphrasing) is feasible, but causal-level tracking is monotonic and irrevocable. We estimate p ≈ 0.1 for sophisticated attacks.
-- p(bypass_rule_of_two): Requires an attack that does not need one of the three conditions. By construction, no complete exfiltration attack can avoid all three. We estimate p ≈ 0.01 for edge cases where the categorization is imprecise.
+```
+Injection succeeds
+  → Barrier 1: Is the target tool in this batch's CapabilityToken? (2-5 of 45+ tools visible)
+  → Barrier 2: Does the token's TTL still hold? (300s window vs unbounded)
+  → Barrier 3: Does the taint check pass? (TaintStore content-level + CausalTaintTracker causal-level)
+  → Barrier 4: Does the Rule of Two permit this combination? (structural constraint on attack chain completeness)
+  → Barrier 5: Is the target path within granted_paths? (event-derived path scoping)
+```
 
-Combined reduction factor: 0.11 × 0.0035 × 0.1 × 0.01 ≈ 3.85 × 10⁻⁷, representing approximately **seven orders of magnitude** reduction in attack surface for deterministic attacks.
+Each barrier operates independently and through a different mechanism (tool visibility, temporal expiry, data provenance, structural constraint, path scoping). An attacker must bypass **all five barriers simultaneously within a single 300-second token window** to complete an exfiltration chain.
 
-This estimate is conservative: it does not account for the Gate's token validation (which renders ungrantted tools invisible to the LLM, preventing even the formation of adversarial tool calls) or the EventInjectionGate's rate limiting and cascade depth restrictions.
+We quantify three barriers that admit precise structural measurement:
+
+| Barrier | Ambient authority | Event-scoped capability | Reduction factor |
+|---------|-------------------|-------------------------|------------------|
+| Tool exposure | 45+ tools always visible | 2-5 tools per token | ~9-22× reduction |
+| Temporal window | Unbounded (session-level) | 300s TTL per batch | Proportional to session length; for a 24h agent: ~288× |
+| Attack chain completeness | No structural constraint | Rule of Two (at most 2 of 3 conditions) | Categorical: complete chains structurally impossible |
+
+The remaining barriers (taint tracking evasion, path scoping) provide additional defense layers whose quantitative contribution depends on attacker sophistication and will be characterized through empirical evaluation in future work.
+
+**The critical insight is not a specific numerical reduction factor, but a qualitative shift**: from a single-barrier model (security depends entirely on LLM injection resistance) to a multi-barrier model (security is maintained as long as at least one structural barrier holds). This transforms the security posture from **probabilistic** (dependent on a single stochastic process) to **defense-in-depth** (requiring simultaneous failure of multiple independent mechanisms).
 
 ### 4.2 Coverage analysis against known attack types
 

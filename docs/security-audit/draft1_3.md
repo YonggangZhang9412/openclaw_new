@@ -44,7 +44,7 @@ Atop the EventBus, the CapabilityGate implements Principle 1 — heterogeneous s
 - `ttl`: time-to-live of 300 seconds (automatic expiration)
 - Rule-of-Two flags: `allows_untrusted_input`, `allows_sensitive_data`, `allows_external_action`
 
-The token is issued by a CapabilityIssuer that consults `EVENT_TOOL_GRANTS` — a mapping from event types to minimal tool sets — and `_classify_event_trust()` — which downgrades tool grants for remote or unverified event sources. The LLM only sees tool schemas for the granted tools; ungrantted tools are invisible to the model.
+The token is issued by a CapabilityIssuer that consults `EVENT_TOOL_GRANTS` — a mapping from event types to minimal tool sets — and `_classify_event_trust()` — which downgrades tool grants for remote or unverified event sources. The LLM only sees tool schemas for the granted tools; ungranted tools are invisible to the model.
 
 **Layer 2: Value-level taint checking.** Every tool return value is registered in a TaintStore with its origin and taint level (USER=0, INTERNAL=1, EXTERNAL=2). When the LLM subsequently uses a value as a tool argument, the Gate queries the TaintStore to determine whether the value's taint level exceeds the tool's policy. For instance, an email address extracted from a web fetch (taint=EXTERNAL) cannot be used as the `to` parameter of `send_email` (which requires taint≤USER).
 
