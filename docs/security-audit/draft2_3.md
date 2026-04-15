@@ -50,7 +50,7 @@ These principles impose specific requirements on the underlying architecture tha
 
 The architecture achieves five properties:
 
-**Determinism and prompt injection immunity.** We prove (Supplementary Note 4, Theorem 5) that the CapabilityGate function G is total, deterministic, and LLM-independent — it performs set membership checks, hash comparisons, and boolean arithmetic without invoking any LLM inference. Since G has no natural language processing surface, adversarial prompt injections cannot influence its decisions.
+**Determinism and prompt injection immunity.** We prove (Supplementary Note 5, Theorem 4) that the CapabilityGate function G is total, deterministic, and LLM-independent — it performs set membership checks, hash comparisons, and boolean arithmetic without invoking any LLM inference. Since G has no natural language processing surface, adversarial prompt injections cannot influence its decisions.
 
 **Automatic privilege decay.** Tokens expire after 300 seconds. We prove (Supplementary Note 3, Theorem 4) that event-scoped authority reduces cumulative privilege exposure to at most 9.1% of the ambient authority model under worst-case assumptions (k=5 tools per batch, 55 system-wide tools, 24h session).
 

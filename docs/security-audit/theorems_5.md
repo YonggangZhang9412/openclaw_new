@@ -59,9 +59,9 @@ Operations: glob pattern matching (deterministic), counter comparison, boolean e
 
 No check contains recursion, unbounded loops, or blocking I/O. G always reaches a DENY or ALLOW return in finite steps. ∎
 
-## Theorem 3: Gate Determinism and LLM-Independence
+## Theorem 4: Gate Determinism and LLM-Independence
 
-**Theorem 3 (Gate Properties).** G is (a) deterministic and (b) LLM-independent.
+**Theorem 4 (Gate Properties).** G is (a) deterministic and (b) LLM-independent.
 
 **Proof of (a).**
 
@@ -81,4 +81,4 @@ G evaluates the *output* of L (the proposed tool call) against static policies a
 
 ## Security Implication
 
-Theorem 3(a) + 3(b) establish **prompt injection immunity**: since G is deterministic and LLM-independent, no adversarial input processed by L can alter G's evaluation logic. An adversary can influence *which* (t, args) the LLM proposes, but cannot influence *how* G evaluates that proposal. G has no natural language processing surface.
+Theorem 4(a) + 4(b) establish **prompt injection immunity**: since G is deterministic and LLM-independent, no adversarial input processed by L can alter G's evaluation logic. An adversary can influence *which* (t, args) the LLM proposes, but cannot influence *how* G evaluates that proposal. G has no natural language processing surface.

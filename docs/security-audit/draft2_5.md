@@ -45,7 +45,7 @@ The `EVENT_TOOL_GRANTS` mapping and `DEFAULT_TOOL_POLICIES` are manually curated
 
 ### 7.5 Formal verification
 
-We provide formal definitions, theorem statements, and proofs for the core claims in Supplementary Notes 1-4: the Agent Authority Impossibility (Theorem 1), Rule of Two sufficiency (Theorem 2), CausalTaintTracker monotonicity (Theorem 3), privilege exposure bound (Theorem 4), and Gate determinism (Theorem 5). These proofs operate over the mathematical model defined in the Supplementary; full machine-verified proofs using theorem provers (TLA+, Coq, Lean) remain future work.
+We provide formal definitions, theorem statements, and proofs in Supplementary Notes 1-5: the Agent Authority Impossibility (Theorem 1, Note 1), Rule of Two sufficiency (Theorem 2, Note 2), CausalTaintTracker monotonicity (Lemma 1 + Proposition 1, Note 3), privilege exposure bound (Proposition 3, Note 4), and Gate determinism and LLM-independence (Theorem 4, Note 5). Full machine-verified proofs using theorem provers (TLA+, Coq, Lean) remain future work.
 
 ---
 

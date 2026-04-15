@@ -23,13 +23,17 @@ Note: these sets are not necessarily disjoint. A tool t may belong to multiple s
 
 **Definition 11 (Adversary-Triggered Exfiltration).** Let σ = ((t₁, a₁), (t₂, a₂), ..., (tₘ, aₘ)) be a tool invocation sequence executed within a single event batch. σ constitutes an adversary-triggered exfiltration if and only if all of the following hold:
 
-(E1) **Untrusted influence.** The event batch triggering σ contains data from an untrusted source that causally influenced L's generation of σ. Formally: ∃ d_u with source(d_u) ∉ Trusted such that d_u ∈ state(batch) and L(state_with(d_u)) ≠ L(state_without(d_u)) with non-zero probability.
+(E1) **Untrusted influence.** The event batch triggering σ contains data from an untrusted source that causally influenced L's generation of σ. Formally: ∃ d_u with source(d_u) ∉ Trusted such that d_u ∈ state(batch), and letting s = state_with(d_u) and s' = state_without(d_u):
 
-(E2) **Sensitive data read.** ∃ i ∈ {1,...,m} such that tᵢ ∈ T_R and the result of (tᵢ, aᵢ) contains some d_s ∈ D_S.
+∃ a ∈ 𝒜: Pr[L(s) = a] ≠ Pr[L(s') = a]
 
-(E3) **External transmission.** ∃ j ∈ {1,...,m} such that tⱼ ∈ T_X and the data transmitted by (tⱼ, aⱼ) includes content derived from some d_s ∈ D_S (as read in E2).
+That is, the presence of d_u measurably alters L's output distribution over tool invocations.
 
-Note that E1 is part of the definition, not a theorem conclusion. This avoids the circularity of defining "attack" without reference to adversarial influence and then proving adversarial influence is necessary.
+(E2) **Sensitive data read.** ∃ i ∈ {1,...,m}: tᵢ ∈ T_R ∧ result(tᵢ, aᵢ) ∩ D_S ≠ ∅.
+
+(E3) **External transmission of sensitive content.** ∃ j ∈ {1,...,m}: tⱼ ∈ T_X ∧ transmitted(tⱼ, aⱼ) ∩ content(D_S) ≠ ∅, where content(D_S) = {d.content | d ∈ D_S} is the set of sensitive content values and transmitted(t, a) is the set of data items sent to External by invocation (t, a).
+
+E1 is part of the definition, not a theorem conclusion. This avoids circularity: an "attack" is definitionally adversary-triggered.
 
 **Definition 12 (Batch-Level Condition Predicates).** For a CapabilityToken τ issued for an event batch, define:
 

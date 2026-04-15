@@ -38,8 +38,8 @@ where the last inequality holds by the inductive hypothesis. ∎
 
 **Definition 17 (Causal Policy).** A causal policy for tool t specifies a maximum causal taint level max_causal(t) ∈ L. Tool t is causally blocked at step k if τₖ₋₁ > max_causal(t).
 
-**Proposition 1.** Let t be a tool with max_causal(t) = INTERNAL (e.g., an external-action tool). If at any step k₀ < k, a tool with taint level EXTERNAL was executed, then t is causally blocked at step k.
+**Proposition 1 (Causal Blocking).** Let t be a tool with causal policy max_causal(t) = τ_max for some τ_max ∈ L. Let tₖ₀ be a tool executed at step k₀ with taint(tₖ₀) = τ_high where τ_high > τ_max. Then for all k > k₀, tool t is causally blocked at step k.
 
-**Proof.** By Definition 16, τₖ₀ ≥ taint(tₖ₀) = EXTERNAL (since max(τₖ₀₋₁, EXTERNAL) = EXTERNAL). By Corollary 1, τₖ₋₁ = EXTERNAL. Since EXTERNAL > INTERNAL = max_causal(t), tool t is causally blocked at step k by Definition 17. ∎
+**Proof.** By Definition 16, τₖ₀ = max(τₖ₀₋₁, taint(tₖ₀)) ≥ taint(tₖ₀) = τ_high. By Lemma 1 (monotonicity), for all k > k₀: τₖ₋₁ ≥ τₖ₀ ≥ τ_high > τ_max = max_causal(t). By Definition 17, t is causally blocked at step k. ∎
 
-This proposition formalizes the security guarantee: within a single batch, once any EXTERNAL data source is consulted, all subsequent external-action tools are permanently blocked, regardless of the content of intermediate tool results.
+**Instantiation.** In our architecture, external-action tools (send_email, curl, bash) have max_causal(t) = INTERNAL, and tools that fetch untrusted data (web_fetch, web_search) have taint level EXTERNAL. Proposition 1 with τ_max = INTERNAL and τ_high = EXTERNAL yields: once any EXTERNAL data source is consulted in a batch, all external-action tools are permanently blocked for the remainder of that batch, regardless of intermediate tool results.
