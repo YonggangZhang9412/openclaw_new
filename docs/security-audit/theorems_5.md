@@ -2,9 +2,11 @@
 
 ## Definitions
 
-**Definition 19 (Deterministic Function).** A function f: X → Y is deterministic if:
+**Definition 19 (Deterministic Computation).** A computation C implementing a function f: X → Y is deterministic if C does not access any source of randomness (random number generators, sampling procedures) or external non-determinism (network I/O, concurrent shared state) during its execution. A deterministic computation satisfies:
 
-∀ x₁, x₂ ∈ X: x₁ = x₂ ⟹ f(x₁) = f(x₂)     ... (det)
+∀ x₁, x₂ ∈ X: x₁ = x₂ ⟹ C(x₁) = C(x₂)     ... (det)
+
+This is stronger than the mathematical definition of a function (which is deterministic by definition): it asserts that the *implementation* introduces no non-determinism beyond its explicit inputs.
 
 **Definition 20 (LLM-Independent Function).** A function f is LLM-independent with respect to agent system ℳ = (𝒮, s₀, 𝒯, 𝒜, δ, L, E) if f's computation does not invoke L and does not read any component of 𝒮 exclusively determined by L's prior outputs.
 

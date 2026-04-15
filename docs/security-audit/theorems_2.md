@@ -22,9 +22,9 @@ These sets may overlap. For compound tools (e.g., bash): bash ∈ 𝒯_R ∩ �
 
 **Definition 11 (Data Flow Relation).** For a tool invocation sequence σ = ((t₁, a₁), ..., (tₘ, aₘ)), we define the data flow relation →_σ over data items:
 
-d →_σ d' ≡ ∃ i, j with i ≤ j: d ∈ result(tᵢ, aᵢ) ∧ d'.content ⊇ d.content ∧ d' ∈ transmitted(tⱼ, aⱼ)
+d →_σ d' ≡ ∃ i, j with i ≤ j: d ∈ result(tᵢ, aᵢ) ∧ d.content ⊑ d'.content ∧ d' ∈ transmitted(tⱼ, aⱼ)
 
-Intuitively, d →_σ d' means data item d, produced by tool invocation i, has its content (or a superset thereof) transmitted by tool invocation j.
+where ⊑ denotes the substring relation on byte strings (d.content is a contiguous subsequence of d'.content). Intuitively, d →_σ d' means data item d, produced by tool invocation i, has its content (or content containing it) transmitted by tool invocation j.
 
 **Definition 12 (Adversary-Triggered Exfiltration).** A tool invocation sequence σ executed within a single event batch constitutes an adversary-triggered exfiltration if and only if:
 
