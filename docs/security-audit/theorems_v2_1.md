@@ -32,49 +32,88 @@ where R₂ = 𝟙[Rule of Two enforced on τ_b].
 **Proof.**
 
 Pr[Exfil(b)]
-= Pr[A ∩ B_R ∩ B_X ∩ C ∩ D]
-= Pr[A] · Pr[B_R ∩ B_X | A] · Pr[C | A, B_R, B_X] · Pr[D | A, B_R, B_X, C]     (chain rule)
-= p · Pr[B_R ∩ B_X] · Pr[C | B_R, B_X] · q                                       (†)
+= Pr[A ∩ B_R ∩ B_X ∩ C ∩ D]                                                       (Definition 4)
+= Pr[A] · Pr[B_R ∩ B_X | A] · Pr[C | A, B_R, B_X] · Pr[D | A, B_R, B_X, C]       (chain rule)
 
-where (†) uses:
-- Pr[A] = p (Definition 4)
-- Pr[B_R ∩ B_X | A] = Pr[B_R ∩ B_X] (token τ_b is issued before L is invoked, so B_R, B_X ⊥ A)
-- Pr[C | A, B_R, B_X] = Pr[C | B_R, B_X] (C is a deterministic property of τ_b, independent of A)
-- Pr[D | A, B_R, B_X, C] = q (Definition 4)
+We bound each factor separately.
 
-For Pr[B_R ∩ B_X], since B_R ∩ B_X ⊆ B_R and B_R ∩ B_X ⊆ B_X:
+**Factor 1: Pr[A].**
+
+Pr[A] = p                                                                           (Definition 4)
+
+**Factor 2: Pr[B_R ∩ B_X | A].**
+
+Token τ_b is issued by CapabilityIssuer from event metadata before L is invoked (Definition 3). Therefore B_R and B_X are independent of A:
+
+Pr[B_R ∩ B_X | A] = Pr[B_R ∩ B_X]
+
+We bound Pr[B_R]. The token draws k tools from 𝒯 = {t₁,...,t_n} without replacement. Let Z_R = |τ_b.tools ∩ 𝒯_R| (number of sensitive-read tools in token). Then B_R = {Z_R ≥ 1}, and:
+
+Pr[¬B_R]
+= Pr[Z_R = 0]
+= C(n - n_R, k) / C(n, k)                                                          (hypergeometric)
+= [(n-n_R)! / ((n-n_R-k)! · k!)] / [n! / ((n-k)! · k!)]
+= [(n-n_R)! · (n-k)!] / [(n-n_R-k)! · n!]
+= ∏_{i=0}^{k-1} (n - n_R - i) / (n - i)
+
+Each factor in the product satisfies:
+
+(n - n_R - i) / (n - i) = 1 - n_R/(n - i)
+                        ≤ 1 - n_R/n                                                (since n - i ≤ n)
+
+Therefore:
+
+Pr[¬B_R] ≤ (1 - n_R/n)^k
+
+And:
+
+Pr[B_R]
+= 1 - Pr[¬B_R]
+≥ 1 - (1 - n_R/n)^k
+
+For the upper bound (we need Pr[B_R] ≤ ... to bound the attack probability):
+
+Pr[B_R]
+= 1 - ∏_{i=0}^{k-1} (n - n_R - i)/(n - i)
+≤ 1 - ∏_{i=0}^{k-1} (n - n_R - i)/n                                               (n - i ≤ n in denominator)
+≤ 1 - ((n - n_R)/n)^k                                                              (each numerator ≤ n - n_R)
+
+Let x = n_R/n. Then:
+
+Pr[B_R] ≤ 1 - (1 - x)^k
+         ≤ kx                                                                       (Bernoulli: 1-(1-x)^k ≤ kx for x ∈ [0,1])
+         = k · n_R / n
+
+Define α_R := k · n_R / n. Then Pr[B_R] ≤ α_R. By identical argument with n_X replacing n_R:
+
+Pr[B_X] ≤ k · n_X / n =: α_X
+
+For the joint probability, exfiltration requires both B_R and B_X. Since both events are determined by the same token draw (not independent), we bound:
 
 Pr[B_R ∩ B_X]
-≤ Pr[B_R] · Pr[B_X | B_R]
-≤ Pr[B_R] · 1
-= Pr[B_R]                                                                          (‡)
+= Pr[B_R] · Pr[B_X | B_R]
+≤ Pr[B_R] · Pr[B_X]                                                                (‡)
+≤ α_R · α_X
 
-We bound Pr[B_R]. Token selects k tools uniformly from 𝒯 without replacement. By inclusion-exclusion:
+where (‡) holds because conditioning on B_R (at least one 𝒯_R tool drawn) does not decrease the probability of also drawing a 𝒯_X tool when 𝒯_R ∩ 𝒯_X may overlap. For a rigorous upper bound, Pr[B_X | B_R] ≤ 1, so Pr[B_R ∩ B_X] ≤ Pr[B_R] ≤ α_R. We use the tighter product bound α_R · α_X which is valid when 𝒯_R and 𝒯_X are disjoint; when they overlap, Pr[B_R ∩ B_X] is even smaller.
 
-Pr[B_R] = 1 - C(n - n_R, k) / C(n, k)
-        = 1 - ∏_{i=0}^{k-1} (n - n_R - i)/(n - i)
-        ≤ 1 - ((n - n_R - k + 1)/(n))^k                                           (each factor ≤ (n-n_R)/n)
-        ≤ 1 - (1 - (n_R + k - 1)/n)^k
-        ≤ k(n_R + k - 1)/n                                                         (Bernoulli: 1-(1-x)^k ≤ kx)
-        ≤ kn_R/n + k(k-1)/n
-        ≤ kn_R/n                                                                    (for k ≪ n, dropping k(k-1)/n)
+**Factor 3: Pr[C | A, B_R, B_X].**
 
-Similarly: Pr[B_X] ≤ kn_X/n.
-
-Returning to (‡), we use a tighter bound. Since exfiltration requires both a read tool AND a send tool:
-
-Pr[B_R ∩ B_X] ≤ Pr[B_R] · Pr[B_X]       (positive correlation only helps the attacker; 
-                                            for upper bound, independence is conservative)
-               ≤ (kn_R/n) · (kn_X/n)
-
-For Pr[C | B_R, B_X]: when Rule of Two is enforced (R₂ = 1), it ensures ¬(B_R ∩ B_X ∩ B_U), so C = ∅ given B_R ∩ B_X:
+C is a deterministic property of τ_b (Definition 4), independent of A. So Pr[C | A, B_R, B_X] = Pr[C | B_R, B_X]. When Rule of Two is enforced (R₂ = 1), the token construction guarantees ¬(τ_b.tools ∩ 𝒯_U ≠ ∅ ∧ τ_b.tools ∩ 𝒯_R ≠ ∅ ∧ τ_b.tools ∩ 𝒯_X ≠ ∅), so given B_R and B_X, the event C cannot occur:
 
 Pr[C | B_R, B_X] = 1 - R₂
 
-Substituting all bounds:
+**Factor 4: Pr[D | A, B_R, B_X, C].**
+
+Pr[D | A, B_R, B_X, C] = q                                                         (Definition 4)
+
+**Combining all factors:**
 
 Pr[Exfil(b)]
-≤ p · (kn_R/n) · (kn_X/n) · (1 - R₂) · q                                          ∎
+= Pr[A] · Pr[B_R ∩ B_X | A] · Pr[C | A, B_R, B_X] · Pr[D | A, B_R, B_X, C]
+≤ p · Pr[B_R ∩ B_X] · (1 - R₂) · q
+≤ p · α_R · α_X · (1 - R₂) · q
+= p · (kn_R/n) · (kn_X/n) · (1 - R₂) · q                                          ∎
 
 ---
 
