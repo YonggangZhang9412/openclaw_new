@@ -53,7 +53,7 @@ ShadowClaw 采用了 **30+ 层渐进式模块架构**，每一层在前一层基
 
 **Phase 1: 基础 Agent (s01-s04)**
 - `s01_agent_loop.py` — 基本对话循环，Agent 基类
-- `s02_tool_use.py` — 45+ 工具定义与调度 (20,180 行)
+- `s02_tool_use.py` — 4 个基础工具 (bash/read_file/write_file/edit_file, 557 行)；更多工具分布在后续模块中 (s14/s16/s24 等)
 - `s03_sessions.py` — JSONL 持久化会话状态
 - `s04_multi_channel.py` — 多通道抽象 (CLI/File/Custom)
 
@@ -163,7 +163,7 @@ Event (frozen=True, 不可变)
 └── injection_gate_decision_id # 审计追踪链接
 ```
 
-### 2.2 七大事件源
+### 2.2 八大事件源
 
 | 事件源 | 触发器 | 用途 |
 |--------|--------|------|
@@ -172,6 +172,7 @@ Event (frozen=True, 不可变)
 | FileWatchSource | 文件系统变化 | 配置重载、代码分析 |
 | ProcessWatchSource | 进程退出/启动 | 守护进程监控 |
 | NetworkWatchSource | 端口状态变化 | 数据库重连 |
+| DiscoverySource | 设备发现事件 | 配对桥接 |
 | SkillEventSource | Skill 轮询 | 外部数据变化检测 |
 | CustomSource | 外部注入 | 第三方集成 |
 
@@ -181,7 +182,7 @@ Event (frozen=True, 不可变)
 
 **5 层验证：**
 
-1. **可信内部源判定** — 9 个内部源 (timer/cron/file/process/network/node/contract/task/skill_source) 可绕过外部限制
+1. **可信内部源判定** — 10 个内部源 (timer/cron/file/process/network/node/discovery/contract/task/skill_source) 可绕过外部限制
 2. **事件类型白名单** — 外部源只能注入策略允许的事件类型
 3. **级联深度限制** — 每策略最大 10 层，硬限制 20 层，防止事件循环
 4. **载荷大小限制** — JSON 序列化大小检查 (默认 65KB)
@@ -217,21 +218,28 @@ Layer 3: PriorityQueue       → 公平调度 (CRITICAL 立即, LOW 缓存到心
 - 新事件优先级更高 → 淘汰最低，插入新事件
 - 新事件优先级更低 → 丢弃新事件 (保护高优先级)
 
-### 2.5 Side Consumers — 11 个并行消费者
+### 2.5 Side Consumers — 18 个并行消费者
 
-与主 EventConsumer 并行运行的侧消费者：
+与主 EventConsumer 并行运行的侧消费者 (s23_eventbus.py:4926-5150)：
 
-1. **ConfigWatcher** — file.modified → 重载配置 + 验证
-2. **SecurityEventConsumer** — 任意事件 → 自动安全扫描
-3. **CapabilityGateAuditConsumer** — 所有工具调用 → 不可篡改审计日志
-4. **MemoryIndexer** — 会话消息 → 语义索引更新
-5. **CronLogWriter** — cron.job → SQLite 日志
-6. **NodeHeartbeatHandler** — node.heartbeat → 设备状态
-7. **PairingChallengeValidator** — pairing.request → 挑战-响应
-8. **WebhookStatusMonitor** — webhook.error → 重试/退避
-9. **ToolCallCounter** — tool_call → 频率统计
-10. **ProcessExitHandler** — process.exited → 自动重启
-11. **ErrorAggregator** — any.error → 错误模式检测
+1. **config_watcher** — file.modified → 重载配置 + 验证
+2. **skill_reload_consumer** — skills/ 变化 → 热重载技能
+3. **tts_consumer** — 文本转语音处理
+4. **delivery_consumer** — delivery.enqueue → 可靠消息投递
+5. **hook_bridge** — 事件 → 钩子桥接
+6. **security_consumer** — 任意事件 → 自动安全扫描
+7. **secrets_audit_consumer** — 密钥审计
+8. **plugin_lifecycle_consumer** — 插件生命周期管理
+9. **contract_event_bridge** — 合约事件桥接
+10. **acp_session_consumer** — ACP 会话状态管理
+11. **logging_diagnostic_consumer** — 诊断日志
+12. **daemon_health_consumer** — 守护进程健康检查
+13. **pairing_security_consumer** — 配对安全验证
+14. **discovery_pairing_bridge** — 设备发现 → 配对桥接
+15. **queue_health_consumer** — 队列健康监控
+16. **skill_event_subscriber** — Skill 事件触发匹配
+17. **capability_gate_audit** — 所有门控决策 → 审计日志
+18. **eventbus_audit** — EventBus 自身审计
 
 ---
 

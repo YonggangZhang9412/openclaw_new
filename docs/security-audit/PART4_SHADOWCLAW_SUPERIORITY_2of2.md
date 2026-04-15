@@ -54,7 +54,7 @@ REMOTE_OPEN (未认证自定义事件):
 11 个 Side Consumer 在不干扰主 Agent 循环的情况下并行运行：
 
 - **SecurityEventConsumer**: 实时扫描事件源的安全威胁
-- **CapabilityGateAuditConsumer**: 记录所有门控决策到哈希链
+- **capability_gate_audit**: 记录所有门控决策 (decision_id + round_id 关联追踪)
 - **ErrorAggregator**: 检测错误模式 (可能指示攻击)
 - **ToolCallCounter**: 统计工具频率 (异常检测基础)
 

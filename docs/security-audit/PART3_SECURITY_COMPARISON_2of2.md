@@ -154,12 +154,12 @@ OpenClaw **没有显式的上下文溢出防御或意图漂移检测**：
 
 ### ShadowClaw 的防篡改审计
 
-- **CapabilityGateAuditConsumer**: 所有门控决策记录到哈希链
-- 每条记录包含: `chain_hash = sha256(prev_hash + this_entry)`
-- 任何篡改导致链断裂 → 可检测
-- **InjectionGateDecision**: 每个事件注入决策独立记录
-- **10,000 条 FIFO 审计日志**: 含 decision_id, 时间戳, 原因
+- **capability_gate_audit + eventbus_audit**: 两个专用 Side Consumer 记录所有门控和总线决策
+- **InjectionGateDecision**: 每个事件注入决策独立记录 (decision_id, allowed, source_id, event_type, reason)
+- **CapabilityGate 内部审计**: `_denial_log` 列表 + `_call_counts` 字典 + round_id 关联
+- **10,000 条 FIFO 审计日志**: 有容量上限，自动淘汰旧记录
 - **日志脱敏**: 17 种内置模式自动掩码敏感数据
+- **18 个 Side Consumer**: 并行运行的安全/审计/健康监控消费者链
 
 ---
 
@@ -176,4 +176,4 @@ OpenClaw **没有显式的上下文溢出防御或意图漂移检测**：
 | 7 | 无数据流追踪 | HIGH | 外泄路径畅通 | TaintStore + CausalTaintTracker |
 | 8 | 审批范围窄 | HIGH | 仅 Shell 执行 | EventInjectionGate + EscalationToken |
 | 9 | 上下文漂移 | MEDIUM | 无检测/防护 | 自动压缩 + 意图选择 + 自愈 |
-| 10 | 审计可篡改 | MEDIUM | 本地日志 | 哈希链防篡改日志 |
+| 10 | 审计可篡改 | MEDIUM | 本地日志 | 结构化 FIFO 审计 + decision_id 关联 |

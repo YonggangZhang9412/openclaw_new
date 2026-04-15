@@ -109,12 +109,15 @@ TaintLevel 枚举:
 
 ### 4.7 工具风险分级
 
+基于 DEFAULT_TOOL_POLICIES (s26:538-683) 中已定义的工具:
+
 ```
-LOW:      read_file, list_directory, memory_search
-MEDIUM:   write_file, execute_code (仅 INTERNAL 污染)
-HIGH:     curl, wget, send_email, daemon_restart
-CRITICAL: process_kill (仅 USER 污染), bash
+LOW:      read_file, list_directory, memory_search, sandbox_variables
+MEDIUM:   write_file, edit_file, execute_code
+HIGH:     curl, wget, send_email, daemon_restart, security_scan
 ```
+
+注: 工具风险通过 ToolPolicy 的多个属性组合表达 (is_external_action, is_sensitive_reader, max_arg_taint 等)，而非单一 "risk_level" 字段。例如 send_email 的 `to`/`cc`/`bcc` 参数被标记为 sensitive_params，curl 被标记为 is_external_action。
 
 ---
 
@@ -203,23 +206,16 @@ CRITICAL: process_kill (仅 USER 污染), bash
 
 ## 8. 审计与可观测性
 
-### 8.1 不可篡改审计日志
+### 8.1 审计日志
 
-CapabilityGateAuditConsumer 记录所有门控决策：
+capability_gate_audit 和 eventbus_audit 两个 Side Consumer 记录所有门控决策和事件总线操作。InjectionGateDecision 结构包含:
 
-```json
-{
-  "timestamp": 1710000000.0,
-  "event_type": "file.modified",
-  "token_id": "abc123",
-  "tool_requested": "write_file",
-  "gate_decision": "DENY",
-  "gate_reason": "Taint violation: param 'content' has taint=EXTERNAL",
-  "chain_hash": "sha256(prev_hash + this_entry)"
-}
-```
+- decision_id (UUID hex [:12])
+- allowed (bool)
+- source_id, event_type, priority, reason
+- timestamp
 
-`chain_hash` 形成哈希链，任何篡改都会导致链断裂。
+CapabilityGate 内部维护 `_denial_log` 列表和 `_call_counts` 字典，每轮使用 round_id (UUID hex [:8]) 进行关联追踪。审计日志容量上限 10,000 条 (FIFO)。
 
 ### 8.2 日志脱敏 (s18_logging.py)
 
@@ -266,6 +262,6 @@ CapabilityGateAuditConsumer 记录所有门控决策：
 | 装饰器 | wrap_external_content 包裹不可信字符串 |
 | 工厂 | CapabilityIssuer 根据事件类型创建令牌 |
 | 不可变值对象 | CapabilityToken frozen=True |
-| 仅追加日志 | 审计日志哈希链 |
+| 仅追加日志 | FIFO 审计日志 (10,000 条上限) |
 | 观察者/发布订阅 | 11 个 Side Consumer 订阅事件流 |
 | 渐进式分层 | 30 层模块，每层增加能力 |
