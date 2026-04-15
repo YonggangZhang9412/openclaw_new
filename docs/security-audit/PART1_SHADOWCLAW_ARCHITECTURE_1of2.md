@@ -4,13 +4,38 @@
 
 ---
 
-## 1. 架构总览
+## 1. 架构总览: 双螺旋设计哲学
 
-ShadowClaw 是一个基于 **EventBus 驱动 + 能力(Capability)安全模型** 的 Python AI Agent 框架。其核心设计哲学是：
+ShadowClaw (内部代号 **EventClaw**) 的架构建立在两个不可分割的核心哲学之上，它们如同 DNA 的双螺旋——彼此缠绕，相互依存：
+
+### 哲学一: EventBus 统一事件架构
+
+> **系统中的一切触发——用户消息、定时心跳、文件变化、Cron 任务、网络状态、设备事件——都被统一抽象为 Event，流经同一个 EventBus 管道。**
+
+这不仅是架构选择，更是安全基石。EventBus 提供了三个传统请求-响应模型无法实现的结构性保证：
+
+1. **不可伪造的事件溯源**: 每个 Event 是 frozen dataclass，其 `source`、`type`、`origin_chain`、`cascade_depth` 在创建时不可变。攻击者无法伪造事件来源。
+2. **框架强制的级联深度**: 当事件触发子事件时，EventBus 在框架层自动递增 `cascade_depth`，消费者代码无法绕过。这使得无限循环在结构上不可能。
+3. **批量原子性**: 多个事件被批量处理，能力令牌覆盖整个批次的工具/路径并集。安全决策在原子窗口内完成，而非跨请求碎片化。
+
+### 哲学二: 能力安全 (Capability-Based Security)
 
 > **Agent 默认拥有零权限，每一次操作都需要通过即时签发的能力令牌(CapabilityToken)获得最小授权。**
 
-这与传统 Agent 框架（如 OpenClaw）的 "Agent = User，继承所有权限" 形成了根本性的对立。
+### 为什么双螺旋不可拆分
+
+**关键洞察: 能力安全需要 EventBus 作为结构性基础。** 这不是架构偏好，而是工程必然——
+
+CapabilityIssuer 签发令牌时，依赖 Event 的三个属性:
+- `event.source` + `event.origin_chain` → 确定信任等级 (LOCAL_TRUSTED / REMOTE_VERIFIED / REMOTE_OPEN) → 裁剪工具集
+- `event.payload["path"]` → 推断文件路径 → 设置 `granted_paths`
+- `event.payload["_security_hints"]` → 推断 Rule of Two 标志 → 约束令牌
+
+如果没有 EventBus 的统一事件模型，这些信息将分散在 HTTP headers、WebSocket frames、文件系统事件中，格式各异，无法统一处理。**EventBus 是能力安全的数据基础设施。**
+
+反过来，能力安全赋予了 EventBus 安全意义: 没有 CapabilityGate，EventBus 只是一个事件路由器；有了 CapabilityGate，EventBus 成为了一个 **安全执行管道**。
+
+这与传统 Agent 框架（如 OpenClaw）的 "Agent = User，继承所有权限" 形成了根本性的范式差异。OpenClaw 无法简单地 "引入能力安全" 而不重构为事件驱动架构——因为能力安全所需的事件溯源、批量原子性、级联深度追踪等结构性保证，在请求-响应模型中不存在。
 
 ### 1.1 代码规模
 
@@ -77,6 +102,46 @@ ShadowClaw 采用了 **30+ 层渐进式模块架构**，每一层在前一层基
 **Phase 13: 通道适配与扩展 (s27-s40)**
 - Telegram、Discord、WhatsApp、Slack、飞书等通道适配器
 - 合约系统、MCP 工作流、设备认证、QR 配对
+
+### 1.3 渐进式分层的深度评估 — 利弊剖析
+
+这种 `s01 → s40` 的编号分层架构是 ShadowClaw 的独特特征，值得客观审视：
+
+**优势:**
+
+| 优势 | 说明 |
+|------|------|
+| **依赖方向明确** | 高层 (s23) 可导入低层 (s01-s22)，反向导入被自然禁止。数字即依赖契约。 |
+| **渐进式理解** | 新开发者可以从 s01 开始理解系统，逐层深入。每层的职责一目了然。 |
+| **单向扩展** | 添加新功能 = 添加 `s41_new_feature.py`，不影响已有层。向前兼容。 |
+| **演进历史可见** | 编号反映了系统的演进路径: 先有 Agent Loop，再有 Gateway，最后才有 EventBus 和 CapabilityGate。 |
+
+**劣势:**
+
+| 劣势 | 说明 |
+|------|------|
+| **巨型文件** | s02_tool_use.py 高达 20,180 行，s23_eventbus.py 6,586 行。单文件过大降低可维护性。 |
+| **扁平目录** | 40 个文件在同一目录下，没有 src/core/、src/security/ 等语义分组。导航成本高。 |
+| **编号锁定** | 如果需要在 s12 和 s13 之间插入新模块，编号空间不足 (除非使用 s12a)。 |
+| **职责混合** | s23_eventbus.py 不仅包含 EventBus，还包含 EventConsumer、EventBusGateway 等。文件边界 ≠ 职责边界。 |
+
+**与传统包结构的对比:**
+
+```
+传统包结构 (OpenClaw 风格):        渐进式编号 (ShadowClaw 风格):
+src/                                s01_agent_loop.py
+├── agents/                         s02_tool_use.py
+├── gateway/                        s05_gateway.py
+├── security/                       s12_security.py
+├── plugins/                        s23_eventbus.py
+├── config/                         s26_capability_gate.py
+└── channels/                       s28_telegram.py
+
+优势: 语义分组清晰                  优势: 依赖方向显而易见
+劣势: 循环依赖风险                  劣势: 文件过大，缺乏子目录
+```
+
+**结论**: 渐进式编号是一种 **原型期的有效架构** — 它在快速迭代阶段保持了清晰的依赖方向，但随着系统成熟 (78,000 行)，部分大文件需要拆分为子模块。这不影响核心设计，是可预见的工程演进。
 
 ---
 

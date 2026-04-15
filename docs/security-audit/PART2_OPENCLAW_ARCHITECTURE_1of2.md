@@ -46,15 +46,41 @@ openclaw_new/
 ### 1.3 通信流
 
 ```
-消息通道 (WhatsApp/Telegram/Slack/Discord/...)
-    ↓
-Gateway (WebSocket 控制面 @ 127.0.0.1:18789)
-    ├─ Pi Agent 运行时 (RPC 模式)
-    ├─ CLI 接口
-    ├─ WebChat UI
-    ├─ Control UI
-    └─ Canvas Host (A2UI)
+OpenClaw (Gateway-Primary, 同步请求-响应):
+
+  消息通道 (WhatsApp/Telegram/Slack/Discord/...)
+      ↓
+  Gateway (WebSocket 控制面 @ 127.0.0.1:18789)
+      ├─ Pi Agent 运行时 (RPC 模式)
+      ├─ CLI 接口
+      ├─ WebChat UI
+      ├─ Control UI
+      └─ Canvas Host (A2UI)
 ```
+
+**与 ShadowClaw 通信流的关键差异:**
+
+ShadowClaw 采用 **EventBus-Primary 的混合架构**，Gateway 退化为薄传输层:
+
+```
+ShadowClaw (EventBus-Primary, 异步事件驱动):
+
+  消息通道 (Telegram/Discord/...)
+      ↓
+  EventSource (TelegramSource/DiscordSource, 各自后台线程)
+      ↓ 产生 Event(type="channel.message_received", frozen=True)
+  EventInjectionGate (安全准入: 类型/速率/载荷)
+      ↓
+  EventBus PriorityQueue
+      ↓
+  EventConsumer._process_batch() → Agent 处理
+      ↓ 产生 delivery.enqueue 事件
+  DeliveryEventConsumer (SideConsumer)
+      ↓
+  Channel.send() → Telegram sendMessage API
+```
+
+**架构含义**: OpenClaw 的 Gateway 是消息的中心枢纽，所有通道都汇入 Gateway。ShadowClaw 的 EventBus 是事件的中心枢纽，Gateway 仅负责 WebSocket 管理，而通道消息通过各自的 EventSource 直接进入 EventBus。这意味着 ShadowClaw 中所有消息——无论来自用户、定时器、还是文件系统——都经过 **同一个安全管道** (EventInjectionGate + CapabilityGate)。
 
 ---
 
@@ -172,6 +198,21 @@ Layer 7: Gateway HTTP 拒绝列表
 - 捆绑源、包源、文件源
 - 返回 `blocked` 原因如果安装应失败
 - 支持安装与更新模式
+
+**与 ShadowClaw Skill 扫描的实质对比:**
+
+经过代码级对比，两者在扫描能力上 **功能等价**:
+
+| 维度 | OpenClaw | ShadowClaw |
+|------|----------|------------|
+| 扫描时机 | 安装时 (加载前) | 安装时 (加载前) |
+| 是否阻断加载 | 否 (仅警告; hook 可选阻断) | 否 (仅警告) |
+| 逐行规则数 | 4 条 (exec/eval/mining/network) | 4 条 (几乎相同) |
+| 全文件规则数 | 4 条 (外泄/混淆/env收割) | 4 条 (几乎相同) |
+| 扫描上限 | 500 文件, 1MB/文件 | 500 文件, 1MB/文件 |
+| 证据截断 | 120 字符 | 120 字符 |
+
+**关键洞察**: 扫描层本身几乎没有差异。两个系统都是启发式检测 + 警告。**真正的安全差异不在扫描，而在扫描之后** — OpenClaw 中通过扫描的恶意代码获得完整的进程内权限和所有密钥访问；ShadowClaw 中即使恶意 Skill 通过扫描，CapabilityGate 仍然限制它能调用的工具和能触及的文件路径。扫描是第一道防线，但不是唯一防线。
 
 ### 3.4 插件清单格式
 
