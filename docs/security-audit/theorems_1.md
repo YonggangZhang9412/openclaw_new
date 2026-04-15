@@ -57,9 +57,15 @@ Empirical support: prompt injection benchmarks report 20-80% success rates acros
 
 ∀ s ∈ 𝒮: E((t, a_b), s) = E((t, a*), s)          ... (*)
 
+**Definition 9 (Safety Violation Probability).** For a state s ∈ 𝒮, define the safety violation probability:
+
+V(s) = Σ_{(t,a) ∈ 𝒜: t ∈ 𝒯_s ∧ InfluencedByAdversary(s,t,a)} Pr[L(s) = (t,a)] · 𝟙[E((t,a), s) = ALLOW]
+
+V(s) measures the probability that L proposes a sensitive, adversary-influenced tool invocation that E permits. Safe(ℳ) (Definition 6) is equivalent to V(s) = 0 for all s ∈ Reach(ℳ).
+
 ## Theorem
 
-**Theorem 1 (Agent Authority Impossibility).** Let ℳ be an agent system with ambient authority P(s) = P₀ exhibiting data-instruction conflation. Under Assumptions 1 and 2, Safe(ℳ) and C1 ∧ C2 ∧ C3 cannot simultaneously hold.
+**Theorem 1 (Agent Authority Impossibility).** Let ℳ be an agent system with ambient authority P(s) = P₀ exhibiting data-instruction conflation. Under Assumptions 1 and 2, if C1 ∧ C2 ∧ C3 hold, then ∃ s* ∈ Reach(ℳ): V(s*) > 0, and therefore ¬Safe(ℳ).
 
 ## Proof
 
@@ -113,32 +119,25 @@ E((t_s, a*), s*) = E((t_s, a_b), s*)    [by (8)]
                  = E((t_s, a_b), s_b)    [by (7)]
                  = ALLOW                  [by (1)]                       ... (9)
 
-**Step 5.** We verify InfluencedByAdversary(s*, t_s, a*) (Definition 6). Need:
+**Step 5.** We verify InfluencedByAdversary(s*, t_s, a*) (Definition 6). Take d = d*:
 
-∃ d ∈ data(s*): source(d) ∉ Trusted ∧ Pr[L(s*) = (t_s, a*)] ≠ Pr[L(s* \ {d}) = (t_s, a*)]
+source(d*) ∉ Trusted                                  [by construction]
+s* \ {d*} = s₀                                        [by definition of s*]
+Pr[L(s*) = (t_s, a*)] ≠ Pr[L(s₀) = (t_s, a*)]       [by (5)]
 
-Take d = d*:
-- source(d*) ∉ Trusted   [by construction in Step 2]
-- s* \ {d*} = s₀          [by definition of s*]
-- Pr[L(s*) = (t_s, a*)] ≠ Pr[L(s₀) = (t_s, a*)]   [by (5)]
-
-Therefore:
+All conditions of Definition 6 are satisfied:
 
 InfluencedByAdversary(s*, t_s, a*) = true                                ... (10)
 
-**Step 6 (Contradiction).** Collecting results:
+**Step 6.** We now compute V(s*) (Definition 9). The term (t_s, a*) contributes:
 
-t_s ∈ 𝒯_s                                      [by (1')]
-InfluencedByAdversary(s*, t_s, a*) = true       [by (10)]
-E((t_s, a*), s*) = ALLOW                        [by (9)]
+V(s*) ≥ Pr[L(s*) = (t_s, a*)] · 𝟙[E((t_s, a*), s*) = ALLOW]
+         · 𝟙[t_s ∈ 𝒯_s] · 𝟙[InfluencedByAdversary(s*, t_s, a*)]
+      = Pr[L(s*) = (t_s, a*)] · 1 · 1 · 1                              [by (9), (1'), (10)]
+      = Pr[L(s*) = (t_s, a*)]                                           [by (4)]
+      > 0                                                                ... (11)
 
-By Definition 6 (Safety):
-
-[t_s ∈ 𝒯_s ∧ InfluencedByAdversary(s*, t_s, a*)] ⟹ E((t_s, a*), s*) = DENY
-
-The antecedent holds by (1') and (10). Therefore E((t_s, a*), s*) = DENY. But (9) gives E((t_s, a*), s*) = ALLOW.
-
-DENY ≠ ALLOW. Contradiction. ∎
+Therefore V(s*) > 0, which means ¬Safe(ℳ) (Definition 9). ∎
 
 ## Remark on Scope
 

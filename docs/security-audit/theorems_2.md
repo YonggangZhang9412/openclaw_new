@@ -46,9 +46,15 @@ That is: (E1) adversarial influence is present, (E2) some tool reads sensitive d
 
 ¬(U(τ) ∧ S(τ) ∧ X(τ))     ... (R2)
 
+**Definition 15 (Exfiltration Feasibility).** For a token τ under Gate enforcement, define:
+
+Φ(τ) = 𝟙[U(τ)] · 𝟙[S(τ)] · 𝟙[X(τ)]
+
+Φ(τ) = 1 if and only if the token simultaneously grants untrusted-input, sensitive-read, and external-action tools — the three necessary capabilities for an exfiltration chain. Under (R2): Φ(τ) = 0.
+
 ## Theorem
 
-**Theorem 2 (Rule of Two Sufficiency).** Let σ = ((t₁, a₁), ..., (tₘ, aₘ)) be a tool invocation sequence executed under a CapabilityToken τ satisfying (R2). Assume Gate enforcement: ∀ i ∈ {1,...,m}: tᵢ ∈ τ.granted_tools. If all untrusted data in the current batch was introduced by tools within σ (no cross-batch contamination), then σ is not an adversary-triggered exfiltration.
+**Theorem 2 (Rule of Two Sufficiency).** Let σ = ((t₁, a₁), ..., (tₘ, aₘ)) be executed under token τ with Gate enforcement (∀ i: tᵢ ∈ τ.granted_tools) and no cross-batch contamination. If τ satisfies (R2), then Φ(τ) = 0 and σ cannot be an adversary-triggered exfiltration.
 
 ## Proof
 
@@ -85,15 +91,18 @@ By Gate enforcement: tₖ ∈ τ.granted_tools. Therefore:
 τ.granted_tools ∩ 𝒯_U ⊇ {tₖ} ≠ ∅                                       ... (9)
 ⟹ U(τ) = true     [by Definition 13]                                   ... (10)
 
-**Step 4.** Collecting (3), (6), (10):
+**Step 4.** Collecting (3), (6), (10) and computing Φ(τ) (Definition 15):
 
-U(τ) ∧ S(τ) ∧ X(τ) = true ∧ true ∧ true = true                         ... (11)
+Φ(τ) = 𝟙[U(τ)] · 𝟙[S(τ)] · 𝟙[X(τ)]
+     = 𝟙[true] · 𝟙[true] · 𝟙[true]         [by (3), (6), (10)]
+     = 1 · 1 · 1
+     = 1                                                                  ... (11)
 
-But τ satisfies (R2):
+But τ satisfies (R2), so by Definition 15:
 
-¬(U(τ) ∧ S(τ) ∧ X(τ))                                                   ... (12)
+Φ(τ) = 0                                                                 ... (12)
 
-(11) ∧ (12) ⟹ true ∧ ¬true = true ∧ false = ⊥. Contradiction. ∎
+(11) and (12) give Φ(τ) = 1 = 0, a contradiction. ∎
 
 ## Remarks
 
