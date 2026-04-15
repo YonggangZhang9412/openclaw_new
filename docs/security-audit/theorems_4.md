@@ -1,56 +1,44 @@
-## Theorem 4: Privilege Exposure Bound
+# Supplementary Note 4: Privilege Exposure Bound
 
-### 4.1 Definitions
+## Definition
 
-**Definition 14 (Privilege Exposure).** The privilege exposure of an agent system over a time interval [0, T] is defined as:
+**Definition 18 (Privilege Exposure).** For an agent system with permission model P: S → 2^T operating over a session partitioned into discrete time intervals, the privilege exposure is:
 
-Ξ = ∫₀ᵀ |P(t)| dt
+Ξ = Σₖ₌₁ᴺ |P(sₖ)| · Δtₖ
 
-where P(t) ⊆ T is the set of tools authorized at time t, and |P(t)| is its cardinality. Ξ measures the cumulative "tool-time" exposure — the total opportunity for an attacker to exploit any authorized tool.
+where N is the number of time intervals, P(sₖ) is the permission set during interval k, and Δtₖ is the duration of interval k. Ξ has units of tool-seconds and measures the cumulative authorization surface available to an attacker.
 
-### 4.2 Privilege Exposure Under Ambient Authority
+## Proposition 2: Ambient Authority Exposure
 
-Under ambient authority, P(t) = P₀ for all t ∈ [0, T_session]:
+Under ambient authority, P(s) = P₀ for all states. The session consists of a single interval of duration T_session:
 
-Ξ_ambient = |P₀| × T_session
+Ξ_ambient = |P₀| · T_session
 
-For a system with |P₀| = 55 tools and a 24-hour session (T_session = 86,400s):
+## Proposition 3: Event-Scoped Authority Exposure Bound
 
-Ξ_ambient = 55 × 86,400 = 4,752,000 tool-seconds
+Under event-scoped authority, the session is partitioned into B event batches, each with token validity Δᵢ ≤ TTL_max and tool grant set P_bᵢ with |P_bᵢ| ≤ k. Between batches, P(s) = ∅.
 
-### 4.3 Privilege Exposure Under Event-Scoped Capability Authority
+**Proposition 3.** Ξ_capability ≤ B · k · TTL_max, and the reduction ratio satisfies:
 
-Under event-scoped capability authority, the session is divided into event batches b₁, b₂, ..., b_B. Each batch bᵢ receives a token with tool set P_bᵢ and TTL Δᵢ ≤ TTL_max (= 300s). Between batches, P(t) = ∅.
+Ξ_capability / Ξ_ambient ≤ (k / |P₀|) · (B · TTL_max / T_session)
 
-Ξ_capability = Σᵢ₌₁ᴮ |P_bᵢ| × Δᵢ
+**Proof.**
 
-### 4.4 Theorem Statement
+Ξ_capability = Σᵢ₌₁ᴮ |P_bᵢ| · Δᵢ
 
-**Theorem 4 (Privilege Exposure Bound).** Let k = max_i |P_bᵢ| be the maximum number of tools granted per batch. Then:
+Since |P_bᵢ| ≤ k and Δᵢ ≤ TTL_max:
 
-Ξ_capability ≤ B × k × TTL_max
+≤ Σᵢ₌₁ᴮ k · TTL_max = B · k · TTL_max
 
-and the reduction ratio satisfies:
+Dividing both sides by Ξ_ambient = |P₀| · T_session:
 
-Ξ_capability / Ξ_ambient ≤ (k / |P₀|) × (B × TTL_max / T_session)
+Ξ_capability / Ξ_ambient ≤ (B · k · TTL_max) / (|P₀| · T_session)
+                         = (k / |P₀|) · (B · TTL_max / T_session)  ∎
 
-### 4.5 Proof
+**Example.** With k = 5, |P₀| = 55, TTL_max = 300s, T_session = 86,400s, and B ≤ T_session / TTL_max = 288 (worst case: one batch per TTL window):
 
-Ξ_capability = Σᵢ₌₁ᴮ |P_bᵢ| × Δᵢ ≤ Σᵢ₌₁ᴮ k × TTL_max = B × k × TTL_max
+Ξ_capability / Ξ_ambient ≤ (5/55) · (288 · 300 / 86,400) = 0.091 · 1.0 = 0.091
 
-Dividing by Ξ_ambient = |P₀| × T_session:
+That is, event-scoped authority exposes at most 9.1% of the authorization surface of ambient authority under worst-case batch arrival rates. With typical k = 2-3 and lower batch frequency, the ratio is substantially smaller.
 
-Ξ_capability / Ξ_ambient ≤ (B × k × TTL_max) / (|P₀| × T_session) = (k / |P₀|) × (B × TTL_max / T_session) ∎
-
-### 4.6 Concrete Bound
-
-With k = 5, |P₀| = 55, TTL_max = 300s, T_session = 86,400s:
-
-- If batches arrive at most once per TTL: B ≤ T_session / TTL_max = 288
-- Ξ_capability / Ξ_ambient ≤ (5/55) × (288 × 300 / 86,400) = 0.0909 × 1.0 = **0.0909**
-
-The event-scoped architecture exposes at most **9.1%** of the privilege surface of the ambient authority model under worst-case batch frequency. In practice, batches are typically shorter than TTL_max and k is often 2-3 (not 5), yielding significantly lower exposure.
-
-### 4.7 Note on Interpretation
-
-Privilege exposure Ξ is not a probability. It is a **structural measure of opportunity**: the total tool-time window during which an attacker who has achieved prompt injection could exploit a sensitive tool. A lower Ξ means the attacker has less opportunity to act — even if the injection succeeds.
+**Interpretation.** Ξ is not a probability of attack success. It is a structural measure of opportunity: the total tool-time window during which an attacker who has achieved prompt injection could exploit an authorized tool. Reducing Ξ narrows the attack window proportionally.

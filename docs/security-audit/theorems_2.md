@@ -1,73 +1,76 @@
-## Theorem 2: Rule of Two Sufficiency
+# Supplementary Note 2: Rule of Two Sufficiency
 
-### 2.1 Definitions
+## Definitions
 
-**Definition 6 (Tool Invocation Sequence).** A tool invocation sequence within an event batch is σ = ((t₁, a₁), (t₂, a₂), ..., (tₘ, aₘ)) where tᵢ ∈ T is a tool and aᵢ ∈ Args is its argument set.
+We extend the formal model of Supplementary Note 1.
 
-**Definition 7 (Sensitive Data).** Let S ⊂ Data be the set of sensitive data items (credentials, private keys, personal information, confidential files). A data item s ∈ S is initially internal: it resides within the system boundary and is not accessible to external entities.
+**Definition 8 (Data Item).** A data item is a pair d = (content, label) where content is an arbitrary byte string and label ∈ {PUBLIC, SENSITIVE}. Let D_S = {d ∈ D | d.label = SENSITIVE} denote the set of sensitive data items.
 
-**Definition 8 (External Endpoint).** Let Ext be the set of external endpoints (remote servers, email recipients, API endpoints outside the system boundary).
+**Definition 9 (System Boundary).** The system boundary ∂ partitions all storage locations into Internal (within the agent's host) and External (accessible by entities outside the agent's control). A data item d is internal if its storage location ℓ(d) ∈ Internal.
 
-**Definition 9 (Exfiltration Attack).** A tool invocation sequence σ constitutes an exfiltration attack if there exist s ∈ S and e ∈ Ext such that:
-1. Before executing σ, s is internal (not accessible to e)
-2. After executing σ, the content of s (or information derived from s) has been transmitted to e
+**Definition 10 (Tool Classification).** Each tool t ∈ T is classified along three boolean dimensions:
 
-**Definition 10 (Attack Conditions).** For a tool invocation sequence σ, define three predicates:
+- reads_sensitive(t) = true iff executing t can produce output containing d ∈ D_S
+- sends_external(t) = true iff executing t can transmit data to a location ℓ ∈ External
+- receives_untrusted(t) = true iff executing t introduces data from sources ∉ Trusted into the agent's state
 
-- **U(σ)** (Untrusted input): The event batch that triggered σ contains data from an untrusted external source that influenced L's generation of σ. Formally: ∃ d_u ∈ C such that d_u originates from an untrusted source and L(C) ≠ L(C \ {d_u}), i.e., removing d_u would change the output.
+We define:
+- T_R = {t ∈ T | reads_sensitive(t) = true}
+- T_X = {t ∈ T | sends_external(t) = true}
+- T_U = {t ∈ T | receives_untrusted(t) = true}
 
-- **S(σ)** (Sensitive data access): At least one tool invocation in σ reads sensitive data. Formally: ∃ i ∈ {1,...,m} such that tᵢ ∈ T_read and result(tᵢ, aᵢ) ∩ S ≠ ∅.
+Note: these sets are not necessarily disjoint. A tool t may belong to multiple sets (e.g., bash ∈ T_R ∩ T_X).
 
-- **X(σ)** (External action): At least one tool invocation in σ transmits data to an external endpoint. Formally: ∃ j ∈ {1,...,m} such that tⱼ ∈ T_ext and dest(aⱼ) ∈ Ext.
+**Definition 11 (Adversary-Triggered Exfiltration).** Let σ = ((t₁, a₁), (t₂, a₂), ..., (tₘ, aₘ)) be a tool invocation sequence executed within a single event batch. σ constitutes an adversary-triggered exfiltration if and only if all of the following hold:
 
-**Note on compound tools.** A tool t that can both read sensitive data and transmit externally (e.g., `bash`) satisfies t ∈ T_read ∩ T_ext. This does not affect the theorem — such a tool contributes to both S(σ) and X(σ) simultaneously.
+(E1) **Untrusted influence.** The event batch triggering σ contains data from an untrusted source that causally influenced L's generation of σ. Formally: ∃ d_u with source(d_u) ∉ Trusted such that d_u ∈ state(batch) and L(state_with(d_u)) ≠ L(state_without(d_u)) with non-zero probability.
 
-### 2.2 Theorem Statement
+(E2) **Sensitive data read.** ∃ i ∈ {1,...,m} such that tᵢ ∈ T_R and the result of (tᵢ, aᵢ) contains some d_s ∈ D_S.
 
-**Theorem 2 (Necessity of Three Conditions).** If σ is an exfiltration attack, then U(σ) ∧ S(σ) ∧ X(σ).
+(E3) **External transmission.** ∃ j ∈ {1,...,m} such that tⱼ ∈ T_X and the data transmitted by (tⱼ, aⱼ) includes content derived from some d_s ∈ D_S (as read in E2).
 
-Equivalently, by contrapositive: if ¬U(σ) ∨ ¬S(σ) ∨ ¬X(σ), then σ is not an exfiltration attack.
+Note that E1 is part of the definition, not a theorem conclusion. This avoids the circularity of defining "attack" without reference to adversarial influence and then proving adversarial influence is necessary.
 
-### 2.3 Proof
+**Definition 12 (Batch-Level Condition Predicates).** For a CapabilityToken τ issued for an event batch, define:
 
-We prove each condition is necessary by showing that its negation precludes exfiltration.
+- U(τ) ≡ τ.granted_tools ∩ T_U ≠ ∅ (token grants tools that receive untrusted data)
+- S(τ) ≡ τ.granted_tools ∩ T_R ≠ ∅ (token grants tools that read sensitive data)
+- X(τ) ≡ τ.granted_tools ∩ T_X ≠ ∅ (token grants tools that send externally)
 
-**Claim 1: Exfiltration(σ) ⟹ S(σ).**
+**Definition 13 (Rule of Two Constraint).** A CapabilityToken τ satisfies the Rule of Two if:
 
-Proof. By Definition 9, exfiltration requires that sensitive data s ∈ S is read and subsequently transmitted. If ¬S(σ), then no tool in σ reads any s ∈ S. Therefore no sensitive data enters the execution context, and no sensitive data can be transmitted to any external endpoint. Hence ¬Exfiltration(σ). By contrapositive, Exfiltration(σ) ⟹ S(σ). ∎
+|{U(τ), S(τ), X(τ)} ∩ {true}| ≤ 2
 
-**Claim 2: Exfiltration(σ) ⟹ X(σ).**
+Equivalently: ¬(U(τ) ∧ S(τ) ∧ X(τ)).
 
-Proof. By Definition 9, exfiltration requires that s reaches an external endpoint e ∈ Ext. If ¬X(σ), then no tool in σ transmits data to any external endpoint. The system boundary is not breached, so s remains internal. Hence ¬Exfiltration(σ). By contrapositive, Exfiltration(σ) ⟹ X(σ). ∎
+## Theorem Statement
 
-**Claim 3: Exfiltration(σ) ⟹ U(σ).**
+**Theorem 2 (Rule of Two Sufficiency).** Let σ be a tool invocation sequence executed under a CapabilityToken τ that satisfies the Rule of Two. Assume that the CapabilityGate enforces τ.granted_tools (i.e., ∀ i: tᵢ ∈ τ.granted_tools). Then σ cannot constitute an adversary-triggered exfiltration.
 
-Proof. If ¬U(σ), then no untrusted external data influenced L's generation of σ. The sequence σ was generated entirely from the operator's system prompt, conversation history of trusted interactions, and the agent's own prior outputs. In this case, σ reflects the operator's intent (possibly mediated through the LLM's interpretation, but without adversarial influence). By definition, an action that faithfully reflects the operator's intent — even if it involves reading sensitive data and sending it externally — is an authorized operation, not an attack. Therefore ¬Exfiltration(σ) as an attack. By contrapositive, Exfiltration(σ) ⟹ U(σ). ∎
+## Proof
 
-**Combining Claims 1-3:** Exfiltration(σ) ⟹ U(σ) ∧ S(σ) ∧ X(σ). ∎
+We prove by contradiction. Assume σ is an adversary-triggered exfiltration under token τ satisfying the Rule of Two.
 
-### 2.4 Corollary: Rule of Two
+**Step 1 (From E2 to S).** By Definition 11 (E2), ∃ tᵢ ∈ T_R in σ. Since the Gate enforces τ.granted_tools, tᵢ ∈ τ.granted_tools. Therefore τ.granted_tools ∩ T_R ≠ ∅, which means S(τ) = true.
 
-**Corollary (Rule of Two).** Let σ be a tool invocation sequence within an event batch. If at most two of {U(σ), S(σ), X(σ)} are true, then σ is not an exfiltration attack.
+**Step 2 (From E3 to X).** By Definition 11 (E3), ∃ tⱼ ∈ T_X in σ. By the same Gate enforcement argument, tⱼ ∈ τ.granted_tools. Therefore τ.granted_tools ∩ T_X ≠ ∅, which means X(τ) = true.
 
-Proof. By contrapositive of Theorem 2: Exfiltration(σ) requires U(σ) ∧ S(σ) ∧ X(σ), which requires all three predicates to be true. If at most two are true, then ¬(U(σ) ∧ S(σ) ∧ X(σ)), therefore ¬Exfiltration(σ). ∎
+**Step 3 (From E1 to U).** By Definition 11 (E1), the batch contains untrusted data that causally influenced σ. For this untrusted data to enter the agent's state during this batch, either:
+- (a) The untrusted data was already in session history from a prior batch (cross-batch contamination — outside scope; see Remark below), or
+- (b) Some tool tₖ ∈ T_U was invoked in this batch, introducing untrusted data. By Gate enforcement, tₖ ∈ τ.granted_tools, so τ.granted_tools ∩ T_U ≠ ∅, meaning U(τ) = true.
 
-### 2.5 Application to CapabilityToken
+Under case (b): U(τ) = true.
 
-The CapabilityToken enforces the Rule of Two at the authorization level. During token issuance, the CapabilityIssuer evaluates:
+**Step 4 (Contradiction).** From Steps 1-3 (case b): U(τ) ∧ S(τ) ∧ X(τ) = true. Therefore |{U(τ), S(τ), X(τ)} ∩ {true}| = 3 > 2, contradicting the Rule of Two constraint (Definition 13).
 
-- U_token: whether the granted tools include untrusted-input sources (web_fetch, web_search)
-- S_token: whether the granted tools include sensitive data readers (read_file with sensitive path patterns)
-- X_token: whether the granted tools include external action tools (send_email, curl, bash)
+Therefore, under case (b), σ cannot be an adversary-triggered exfiltration. ∎
 
-If U_token ∧ S_token ∧ X_token, the issuer removes external action tools from the grant. This ensures:
+## Remarks
 
-|{U_token, S_token, X_token} ∩ {true}| ≤ 2
+**On case (a): cross-batch contamination.** If untrusted data from a prior batch persists in session history and influences the current batch's LLM behavior without any T_U tool being invoked in the current batch, then U(τ) may be false while E1 is still satisfied through historical context. In this case, the Rule of Two does not prevent exfiltration, because the condition U is evaluated at the token level (which tools are granted) rather than at the context level (what data has historically influenced the LLM).
 
-By the Corollary, no exfiltration attack can be completed within this token's scope.
+This is the cross-batch contamination gap discussed in Section 7.3 of the main text. The gap is bounded: it requires (i) a prior batch that processed untrusted data, (ii) that data persisting in session history, (iii) the current batch being classified as trusted (granting sensitive + external tools), and (iv) the LLM being influenced by the historical untrusted data to construct an exfiltration sequence. Quantifying the practical frequency of this scenario is Experiment 4 in the evaluation framework.
 
-### 2.6 Scope Limitation
+**On compound tools.** A tool t ∈ T_R ∩ T_X (e.g., bash, which can both read files and send network requests) is classified in both T_R and T_X. This does not weaken the theorem: if τ grants such a tool, then both S(τ) and X(τ) are true, requiring U(τ) = false for the Rule of Two to hold. This means any batch where bash is granted must not also grant untrusted-input tools — a correct and intended restriction.
 
-Theorem 2 and its corollary hold within the scope of a **single event batch**. The conditions U, S, X are evaluated per-batch. Cross-batch context contamination — where untrusted data from a prior batch persists in session history and satisfies U for a subsequent batch without being recognized as such — falls outside the theorem's scope. See Section 7.3 of the main text for discussion of this limitation.
-
-Additionally, Claim 3 relies on the definition of "attack" as requiring adversarial influence. An authorized but unwise operation (the operator intentionally reads sensitive data and sends it externally) is not classified as an attack under this model. The Rule of Two protects against adversarial subversion of agent behavior, not against operator error.
+**On the definition of T_R, T_X, T_U.** The correctness of the Rule of Two depends on the accuracy of tool classification. If a tool is incorrectly classified (e.g., a tool that can exfiltrate data is not placed in T_X), the theorem's conclusion still holds formally, but the real-world security guarantee is weakened. Policy completeness is discussed in Section 7.4 of the main text.

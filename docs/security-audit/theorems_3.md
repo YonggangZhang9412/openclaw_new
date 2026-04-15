@@ -1,51 +1,45 @@
-## Theorem 3: CausalTaintTracker Monotonicity
+# Supplementary Note 3: Causal Taint Tracking Properties
 
-### 3.1 Definitions
+## Definitions
 
-**Definition 11 (Taint Level).** TaintLevel is a totally ordered set {USER, INTERNAL, EXTERNAL} with ordering USER < INTERNAL < EXTERNAL. We write τ₁ ≤ τ₂ to denote that τ₁ is at most as tainted as τ₂.
+**Definition 14 (Taint Lattice).** Let (L, ≤) be a totally ordered set L = {USER, INTERNAL, EXTERNAL} with USER < INTERNAL < EXTERNAL. L forms a bounded lattice with ⊥ = USER, ⊤ = EXTERNAL, meet a ∧ b = min(a, b), and join a ∨ b = max(a, b).
 
-**Definition 12 (CausalTaintTracker State).** Within an event batch, the CausalTaintTracker maintains a state variable τ_round ∈ TaintLevel, initialized to USER at the beginning of each batch:
+**Definition 15 (Tool Taint Assignment).** Each tool t ∈ T has a fixed taint level assignment taint: T → L defined by the source trust of the tool's return values. For example: taint(read_file) = INTERNAL, taint(web_fetch) = EXTERNAL, taint(memory_search) = USER.
 
-τ_round(0) = USER
+**Definition 16 (CausalTaintTracker).** A CausalTaintTracker for a batch of m tool executions is a sequence of taint levels τ = (τ₀, τ₁, ..., τₘ) defined inductively:
+- τ₀ = USER (initial state at batch start)
+- τₖ = τₖ₋₁ ∨ taint(tₖ) = max(τₖ₋₁, taint(tₖ)) for k = 1, ..., m
 
-**Definition 13 (Update Rule).** After each tool execution at step k that returns a result with taint level τ_result(k), the tracker updates:
+where tₖ is the tool executed at step k.
 
-τ_round(k) = max(τ_round(k-1), τ_result(k))
+## Lemma 1: Monotonicity
 
-where max is taken with respect to the total order on TaintLevel.
+**Lemma 1.** For all 0 ≤ i ≤ j ≤ m: τᵢ ≤ τⱼ.
 
-### 3.2 Theorem Statement
+**Proof.** By induction on j − i.
 
-**Theorem 3 (Monotonicity).** For any event batch with tool execution steps 0 < k₁ < k₂, the causal taint level is monotonically non-decreasing:
+*Base case (j = i):* τᵢ ≤ τᵢ holds trivially.
 
-τ_round(k₁) ≤ τ_round(k₂)
+*Inductive step:* Assume τᵢ ≤ τⱼ for all i ≤ j ≤ k. We show τᵢ ≤ τₖ₊₁.
 
-Equivalently: once τ_round reaches a given level, it never decreases within the batch.
+By definition, τₖ₊₁ = max(τₖ, taint(tₖ₊₁)). Since max(a, b) ≥ a for all a, b ∈ L:
 
-### 3.3 Proof
+τₖ₊₁ = max(τₖ, taint(tₖ₊₁)) ≥ τₖ ≥ τᵢ
 
-By induction on the step index k.
+where the last inequality holds by the inductive hypothesis. ∎
 
-**Base case (k=1).** τ_round(1) = max(τ_round(0), τ_result(1)) = max(USER, τ_result(1)) ≥ USER = τ_round(0). ✓
+## Corollary 1: Irrevocability
 
-**Inductive step.** Assume τ_round(k) ≥ τ_round(k-1) for all steps up to k. At step k+1:
+**Corollary 1 (Irrevocable Contamination).** If ∃ k₀ ≤ m such that τₖ₀ = EXTERNAL, then ∀ k ≥ k₀: τₖ = EXTERNAL.
 
-τ_round(k+1) = max(τ_round(k), τ_result(k+1))
+**Proof.** By Lemma 1, τₖ ≥ τₖ₀ = EXTERNAL. Since EXTERNAL = ⊤ (the maximum element of L), τₖ = EXTERNAL. ∎
 
-Since max(a, b) ≥ a for any a, b in a totally ordered set:
+## Proposition 1: Causal Blocking Guarantee
 
-τ_round(k+1) = max(τ_round(k), τ_result(k+1)) ≥ τ_round(k)
+**Definition 17 (Causal Policy).** A causal policy for tool t specifies a maximum causal taint level max_causal(t) ∈ L. Tool t is causally blocked at step k if τₖ₋₁ > max_causal(t).
 
-Therefore τ_round(k+1) ≥ τ_round(k). By induction, τ_round is monotonically non-decreasing. ∎
+**Proposition 1.** Let t be a tool with max_causal(t) = INTERNAL (e.g., an external-action tool). If at any step k₀ < k, a tool with taint level EXTERNAL was executed, then t is causally blocked at step k.
 
-### 3.4 Corollary: Irrevocability of Contamination
+**Proof.** By Definition 16, τₖ₀ ≥ taint(tₖ₀) = EXTERNAL (since max(τₖ₀₋₁, EXTERNAL) = EXTERNAL). By Corollary 1, τₖ₋₁ = EXTERNAL. Since EXTERNAL > INTERNAL = max_causal(t), tool t is causally blocked at step k by Definition 17. ∎
 
-**Corollary.** If at any step k₀ within a batch, τ_round(k₀) = EXTERNAL, then for all subsequent steps k > k₀ in the same batch: τ_round(k) = EXTERNAL.
-
-Proof. By Theorem 3, τ_round(k) ≥ τ_round(k₀) = EXTERNAL. Since EXTERNAL is the maximum element of TaintLevel, τ_round(k) = EXTERNAL. ∎
-
-This corollary formalizes the "irrevocable contamination" property: once external data enters the LLM's context within a batch, the CausalTaintTracker permanently classifies the batch as contaminated. No subsequent tool execution can reduce the taint level.
-
-### 3.5 Security Implication
-
-If a tool policy requires causal taint ≤ INTERNAL for a tool t (e.g., tools performing external actions), then once any EXTERNAL data is observed in the batch, t is permanently blocked for the remainder of that batch. This provides a fail-safe guarantee independent of TaintStore's content-level tracking.
+This proposition formalizes the security guarantee: within a single batch, once any EXTERNAL data source is consulted, all subsequent external-action tools are permanently blocked, regardless of the content of intermediate tool results.

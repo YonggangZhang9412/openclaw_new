@@ -1,74 +1,84 @@
-## Theorem 5: CapabilityGate Determinism and LLM-Independence
+# Supplementary Note 5: CapabilityGate Determinism and LLM-Independence
 
-### 5.1 Definitions
+## Definitions
 
-**Definition 15 (Gate Function).** The CapabilityGate verification function is:
+**Definition 19 (Deterministic Function).** A function f: X → Y is deterministic if ∀ x₁, x₂ ∈ X: x₁ = x₂ ⟹ f(x₁) = f(x₂).
 
-G: ToolName × ToolArgs × Token × TaintStore → {ALLOW, DENY} × Reason
+**Definition 20 (LLM-Independent Function).** A function f is LLM-independent with respect to agent system M = (S, s₀, T, A, δ, L, E) if f's computation does not invoke L and does not read any component of s that is exclusively determined by L's prior outputs (i.e., f does not depend on the LLM's reasoning trace, attention patterns, or token probabilities).
 
-defined by the composition of three checks:
+**Definition 21 (CapabilityGate Function).** The CapabilityGate function G is defined as:
 
-G(t, a, τ, S) = Check₃(t, a, τ, Check₂(t, a, τ, S, Check₁(t, a, τ)))
+G: A × Token × TaintStore × CallCounter → {ALLOW, DENY} × Reason
 
-where each check can short-circuit to DENY:
+For input (a, τ, S, C) where a = (t, args) is a tool invocation, τ is the current CapabilityToken, S is the TaintStore state, and C is the per-round call counter:
 
-**Check₁(t, a, τ):** Token validation
 ```
-if now() > τ.issued_at + τ.ttl:  return DENY("token_expired")
-if t ∉ τ.granted_tools:           return DENY("tool_not_granted")
-if t ∈ τ.denied_tools:            return DENY("tool_denied")
-return CONTINUE
-```
-
-**Check₂(t, a, τ, S):** Taint validation
-```
-for each (param_name, param_value) in a:
-    taint_level = S.query(param_value)        // S.query is deterministic (see below)
-    if taint_level ≠ None:
-        max_allowed = policy(t, param_name).max_taint
-        if taint_level > max_allowed:
-            return DENY("taint_violation", param_name, taint_level, max_allowed)
-return CONTINUE
+G(a, τ, S, C) = 
+  let r₁ = Check₁(t, τ) in
+  if r₁ = DENY(reason) then (DENY, reason)
+  else let r₂ = Check₂(t, args, τ, S) in
+  if r₂ = DENY(reason) then (DENY, reason)
+  else Check₃(t, args, τ, C)
 ```
 
-**Check₃(t, a, τ):** Structural validation
-```
-if policy(t).requires_path_check:
-    if ¬match(a.path, τ.granted_paths):       return DENY("path_not_granted")
-if call_count(t) ≥ max_calls_per_round:        return DENY("frequency_exceeded")
-if causal_rule_of_two_violated(t):             return DENY("rule_of_two")
-return ALLOW
-```
+where:
 
-**Definition 16 (Deterministic Function).** A function f: X → Y is deterministic if for all x₁, x₂ ∈ X: x₁ = x₂ ⟹ f(x₁) = f(x₂). That is, identical inputs always produce identical outputs.
+**Check₁(t, τ):**
+- If current_time() > τ.issued_at + τ.ttl → DENY("token_expired")
+- If t ∉ τ.granted_tools → DENY("tool_not_granted")
+- If t ∈ τ.denied_tools → DENY("tool_denied")
+- Otherwise → CONTINUE
 
-**Definition 17 (LLM-Independence).** A function f is LLM-independent if f's computation does not invoke any LLM inference call and does not read any LLM internal state (weights, activations, attention patterns, or token probabilities).
+Operations: timestamp comparison (>), set membership (∈). All deterministic.
 
-### 5.2 Theorem Statement
+**Check₂(t, args, τ, S):**
+- For each (pname, pvalue) ∈ args:
+  - tl ← S.query(pvalue)  [SHA-256 hash + dictionary lookup + string matching]
+  - If tl ≠ None ∧ tl > policy(t, pname).max_taint → DENY("taint_violation")
+- → CONTINUE
 
-**Theorem 5.** The CapabilityGate function G is (a) a total function on its domain, (b) deterministic, and (c) LLM-independent.
+Operations: iteration over finite set, SHA-256 (deterministic hash), dictionary lookup, integer comparison. All deterministic.
 
-### 5.3 Proof
+**Check₃(t, args, τ, C):**
+- If policy(t).requires_path ∧ ¬glob_match(args.path, τ.granted_paths) → DENY("path_denied")
+- If C[t] ≥ max_calls_per_round → DENY("frequency_exceeded")
+- If causal_rule_of_two_violated(t, τ) → DENY("rule_of_two")
+- Otherwise → ALLOW
 
-**(a) Totality.** G is defined for all inputs (t, a, τ, S) where t ∈ ToolName, a ∈ ToolArgs, τ is a valid Token, and S is a TaintStore instance. Each check terminates: Check₁ performs constant-time comparisons; Check₂ iterates over a finite argument set with bounded query operations; Check₃ performs glob matching and counter lookup. No check contains unbounded loops or recursive calls. Therefore G always terminates and produces a result. ∎
+Operations: glob pattern matching (deterministic), counter comparison, boolean evaluation. All deterministic.
 
-**(b) Determinism.** We verify each check uses only deterministic operations:
+## Lemma 2: Totality
 
-- Check₁: `now()` is a timestamp read (deterministic at call time); set membership (∈) on frozensets is deterministic; comparison (>) on floats is deterministic.
-- Check₂: `S.query(v)` computes SHA-256(normalize(v)) and performs dictionary lookup — both deterministic; comparison (>) on TaintLevel (an integer enum) is deterministic; iteration over `a` is over a finite, ordered structure.
-- Check₃: `match(path, globs)` is fnmatch — a deterministic string matching algorithm; `call_count(t)` reads a counter dictionary — deterministic; `causal_rule_of_two_violated(t)` evaluates a boolean expression over the CausalTaintTracker state — deterministic (by Theorem 3, the state is a deterministic function of the tool execution history).
+**Lemma 2.** G is a total function: for every valid input (a, τ, S, C), G terminates and produces an output.
 
-None of these operations involves random number generation, sampling, or non-deterministic choice. G is the composition of deterministic functions, therefore G is deterministic. ∎
+**Proof.** G follows a fixed sequential structure: Check₁ → Check₂ → Check₃. Each check terminates:
 
-**(c) LLM-Independence.** Inspecting the computation of G:
-- Check₁ reads τ (a frozen dataclass created by CapabilityIssuer from event metadata), not from LLM output.
-- Check₂ reads S (populated by tool return value registration) and a (the LLM's proposed arguments). While `a` is generated by the LLM, G does not invoke the LLM to validate `a` — it validates `a` through deterministic hash comparison and policy lookup.
-- Check₃ reads τ.granted_paths and call counters — neither involves LLM inference.
+- Check₁: three comparisons, O(1).
+- Check₂: iterates over |args| parameters (bounded by max_params, a system constant). Each iteration: S.query is O(1) hash lookup + bounded scan over |S| ≤ 10,000 entries, plus one comparison. Total: O(|args| · |S|), finite.
+- Check₃: glob matching O(|path| · |patterns|), counter lookup O(1), boolean O(1). All finite.
 
-At no point does G call an LLM, read LLM weights, or condition on LLM internal state. G's inputs (t, a, τ, S) may have been *influenced by* LLM output (the LLM chose t and a), but G's *evaluation* is entirely LLM-independent. ∎
+No check contains recursion, unbounded loops, or blocking I/O. G always reaches a DENY or ALLOW return in finite steps. ∎
 
-### 5.4 Security Implication
+## Theorem 3: Gate Determinism and LLM-Independence
 
-Theorems 5(b) and 5(c) together guarantee **prompt injection immunity** of the CapabilityGate:
+**Theorem 3 (Gate Properties).** G is (a) deterministic and (b) LLM-independent.
 
-Since G is deterministic and LLM-independent, there is no input to G that can be manipulated through the LLM's token stream to alter G's decision. An adversary who successfully injects the LLM can influence *which* tool call (t, a) the LLM proposes, but cannot influence *how* G evaluates that proposal. The adversary cannot "convince" G to allow a tool call that G's policy would deny, because G does not process natural language and has no persuasion surface.
+**Proof of (a).**
+
+Each primitive operation in G is deterministic: set membership on frozensets, SHA-256 hashing, dictionary lookup, integer comparison, glob matching (fnmatch), boolean operations. G composes these through a fixed, branch-free control flow (sequential checks with early return on DENY).
+
+Let (a₁, τ₁, S₁, C₁) = (a₂, τ₂, S₂, C₂). At each step, intermediate values are identical (by determinism of each primitive), and the control flow path is identical (by determinism of branch conditions). Therefore the final return value is identical. ∎
+
+**Proof of (b).**
+
+We verify that G never invokes L and never reads LLM-exclusive state:
+
+- Check₁ reads τ (created by CapabilityIssuer from event metadata) and current_time(). Neither involves L.
+- Check₂ reads args (generated by L, but G does not invoke L to validate them — it applies S.query, a data-structural operation on the TaintStore). S is populated by tool return value registration, not by L.
+- Check₃ reads τ.granted_paths (from event payload), C (framework counter), and Rule of Two flags (set at token issuance). None involves L.
+
+G evaluates the *output* of L (the proposed tool call) against static policies and provenance records, but does not invoke L or condition on L's internal state during this evaluation. ∎
+
+## Security Implication
+
+Theorem 3(a) + 3(b) establish **prompt injection immunity**: since G is deterministic and LLM-independent, no adversarial input processed by L can alter G's evaluation logic. An adversary can influence *which* (t, args) the LLM proposes, but cannot influence *how* G evaluates that proposal. G has no natural language processing surface.
