@@ -2,9 +2,9 @@
 
 ## Definitions
 
-**Definition 14 (Taint Lattice).** Let (L, ≤) be a totally ordered set L = {USER, INTERNAL, EXTERNAL} with USER < INTERNAL < EXTERNAL. L forms a bounded lattice with ⊥ = USER, ⊤ = EXTERNAL, meet a ∧ b = min(a, b), and join a ∨ b = max(a, b).
+**Definition 14 (Taint Lattice).** Let (Λ, ≤) be a totally ordered set Λ = {USER, INTERNAL, EXTERNAL} with USER < INTERNAL < EXTERNAL. Λ forms a bounded lattice with ⊥ = USER, ⊤ = EXTERNAL, meet a ∧ b = min(a, b), and join a ∨ b = max(a, b).
 
-**Definition 15 (Tool Taint Assignment).** Each tool t ∈ T has a fixed taint level assignment taint: T → L defined by the source trust of the tool's return values. For example: taint(read_file) = INTERNAL, taint(web_fetch) = EXTERNAL, taint(memory_search) = USER.
+**Definition 15 (Tool Taint Assignment).** Each tool t ∈ T has a fixed taint level assignment taint: 𝒯 → Λ defined by the source trust of the tool's return values. For example: taint(read_file) = INTERNAL, taint(web_fetch) = EXTERNAL, taint(memory_search) = USER.
 
 **Definition 16 (CausalTaintTracker).** A CausalTaintTracker for a batch of m tool executions is a sequence of taint levels τ = (τ₀, τ₁, ..., τₘ) defined inductively:
 - τ₀ = USER (initial state at batch start)
@@ -22,7 +22,7 @@ where tₖ is the tool executed at step k.
 
 *Inductive step:* Assume τᵢ ≤ τⱼ for all i ≤ j ≤ k. We show τᵢ ≤ τₖ₊₁.
 
-By definition, τₖ₊₁ = max(τₖ, taint(tₖ₊₁)). Since max(a, b) ≥ a for all a, b ∈ L:
+By definition, τₖ₊₁ = max(τₖ, taint(tₖ₊₁)). Since max(a, b) ≥ a for all a, b ∈ Λ:
 
 τₖ₊₁ = max(τₖ, taint(tₖ₊₁)) ≥ τₖ ≥ τᵢ
 
@@ -36,9 +36,9 @@ where the last inequality holds by the inductive hypothesis. ∎
 
 ## Proposition 1: Causal Blocking Guarantee
 
-**Definition 17 (Causal Policy).** A causal policy for tool t specifies a maximum causal taint level max_causal(t) ∈ L. Tool t is causally blocked at step k if τₖ₋₁ > max_causal(t).
+**Definition 17 (Causal Policy).** A causal policy for tool t specifies a maximum causal taint level max_causal(t) ∈ Λ. Tool t is causally blocked at step k if τₖ₋₁ > max_causal(t).
 
-**Proposition 1 (Causal Blocking).** Let t be a tool with causal policy max_causal(t) = τ_max for some τ_max ∈ L. Let tₖ₀ be a tool executed at step k₀ with taint(tₖ₀) = τ_high where τ_high > τ_max. Then for all k > k₀, tool t is causally blocked at step k.
+**Proposition 1 (Causal Blocking).** Let t be a tool with causal policy max_causal(t) = τ_max for some τ_max ∈ Λ. Let tₖ₀ be a tool executed at step k₀ with taint(tₖ₀) = τ_high where τ_high > τ_max. Then for all k > k₀, tool t is causally blocked at step k.
 
 **Proof.** By Definition 16, τₖ₀ = max(τₖ₀₋₁, taint(tₖ₀)) ≥ taint(tₖ₀) = τ_high. By Lemma 1 (monotonicity), for all k > k₀: τₖ₋₁ ≥ τₖ₀ ≥ τ_high > τ_max = max_causal(t). By Definition 17, t is causally blocked at step k. ∎
 

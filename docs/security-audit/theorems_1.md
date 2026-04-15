@@ -45,7 +45,7 @@ where data(s) ⊂ s denotes the untrusted external data present in state s. Intu
 
 Pr[L(s*) = (t, a)] > 0
 
-This is empirically validated: prompt injection attacks achieve non-zero success rates against all major LLM families across diverse target actions¹³˒¹⁵˒¹⁶.
+Empirical support: indirect prompt injection benchmarks report attack success rates of 20-80% across GPT-4, Claude, Gemini, and Llama model families on tool-integrated agent tasks¹⁵˒¹⁶. CaMeL¹² reports that without defenses, 100% of benchmark attacks succeed on some models. Assumption 1 requires only that this probability is non-zero, which is strictly weaker than observed rates.
 
 **Assumption 2 (Argument Mimicry).** For any t ∈ 𝒯_s and legitimate argument vector a_b ∈ Vals(Params(t)), there exists adversarial a* ∈ Vals(Params(t)) such that a_b and a* lie in the same equivalence class under E's observable inputs:
 
