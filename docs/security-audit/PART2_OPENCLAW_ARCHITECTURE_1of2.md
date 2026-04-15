@@ -8,13 +8,13 @@ OpenClaw 是一个基于 **TypeScript/Node.js** 的个人 AI Agent 框架，允�
 
 ### 1.1 信任模型 — 核心假设
 
-OpenClaw 的安全架构建立在一个 **关键假设** 之上（摘自 SECURITY.md）：
+通过对 OpenClaw 的 Gateway 认证逻辑 (`src/gateway/auth.ts`)、Session 路由 (`src/sessions/`)、插件加载器 (`src/plugins/loader.ts`) 的代码分析，可以明确其安全架构建立在一个 **单操作者信任模型** 之上：
 
-> **OpenClaw 不是多租户系统。每个 Gateway 实例的所有认证调用者都被视为可信操作者。**
+> **OpenClaw 将每个 Gateway 实例视为单一操作者的私有空间。所有通过认证的调用者共享同一信任域，不存在调用者之间的隔离边界。**
 
-这意味着：
-- Session ID 是路由控制，**不是**权限边界
-- 如果一个操作者能看到另一个的数据 → **预期行为**
+具体体现在：
+- Session ID 是路由控制，**不是**权限边界 — 任何认证调用者可以访问任何 Session
+- 插件在 Gateway 进程内运行，共享完整的 `process.env` 和 Node.js 运行时
 - 主机/OS 管理员边界被视为可信
 - 修改 `~/.openclaw/` 的任何人被视为可信操作者
 - 已安装的插件以 Gateway 权限在进程内运行
