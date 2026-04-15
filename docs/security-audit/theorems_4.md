@@ -1,74 +1,56 @@
-## Theorem 5: CapabilityGate Determinism and LLM-Independence
+## Theorem 4: Privilege Exposure Bound
 
-### 5.1 Definitions
+### 4.1 Definitions
 
-**Definition 15 (Gate Function).** The CapabilityGate verification function is:
+**Definition 14 (Privilege Exposure).** The privilege exposure of an agent system over a time interval [0, T] is defined as:
 
-G: ToolName × ToolArgs × Token × TaintStore → {ALLOW, DENY} × Reason
+Ξ = ∫₀ᵀ |P(t)| dt
 
-defined by the composition of three checks:
+where P(t) ⊆ T is the set of tools authorized at time t, and |P(t)| is its cardinality. Ξ measures the cumulative "tool-time" exposure — the total opportunity for an attacker to exploit any authorized tool.
 
-G(t, a, τ, S) = Check₃(t, a, τ, Check₂(t, a, τ, S, Check₁(t, a, τ)))
+### 4.2 Privilege Exposure Under Ambient Authority
 
-where each check can short-circuit to DENY:
+Under ambient authority, P(t) = P₀ for all t ∈ [0, T_session]:
 
-**Check₁(t, a, τ):** Token validation
-```
-if now() > τ.issued_at + τ.ttl:  return DENY("token_expired")
-if t ∉ τ.granted_tools:           return DENY("tool_not_granted")
-if t ∈ τ.denied_tools:            return DENY("tool_denied")
-return CONTINUE
-```
+Ξ_ambient = |P₀| × T_session
 
-**Check₂(t, a, τ, S):** Taint validation
-```
-for each (param_name, param_value) in a:
-    taint_level = S.query(param_value)        // S.query is deterministic (see below)
-    if taint_level ≠ None:
-        max_allowed = policy(t, param_name).max_taint
-        if taint_level > max_allowed:
-            return DENY("taint_violation", param_name, taint_level, max_allowed)
-return CONTINUE
-```
+For a system with |P₀| = 55 tools and a 24-hour session (T_session = 86,400s):
 
-**Check₃(t, a, τ):** Structural validation
-```
-if policy(t).requires_path_check:
-    if ¬match(a.path, τ.granted_paths):       return DENY("path_not_granted")
-if call_count(t) ≥ max_calls_per_round:        return DENY("frequency_exceeded")
-if causal_rule_of_two_violated(t):             return DENY("rule_of_two")
-return ALLOW
-```
+Ξ_ambient = 55 × 86,400 = 4,752,000 tool-seconds
 
-**Definition 16 (Deterministic Function).** A function f: X → Y is deterministic if for all x₁, x₂ ∈ X: x₁ = x₂ ⟹ f(x₁) = f(x₂). That is, identical inputs always produce identical outputs.
+### 4.3 Privilege Exposure Under Event-Scoped Capability Authority
 
-**Definition 17 (LLM-Independence).** A function f is LLM-independent if f's computation does not invoke any LLM inference call and does not read any LLM internal state (weights, activations, attention patterns, or token probabilities).
+Under event-scoped capability authority, the session is divided into event batches b₁, b₂, ..., b_B. Each batch bᵢ receives a token with tool set P_bᵢ and TTL Δᵢ ≤ TTL_max (= 300s). Between batches, P(t) = ∅.
 
-### 5.2 Theorem Statement
+Ξ_capability = Σᵢ₌₁ᴮ |P_bᵢ| × Δᵢ
 
-**Theorem 5.** The CapabilityGate function G is (a) a total function on its domain, (b) deterministic, and (c) LLM-independent.
+### 4.4 Theorem Statement
 
-### 5.3 Proof
+**Theorem 4 (Privilege Exposure Bound).** Let k = max_i |P_bᵢ| be the maximum number of tools granted per batch. Then:
 
-**(a) Totality.** G is defined for all inputs (t, a, τ, S) where t ∈ ToolName, a ∈ ToolArgs, τ is a valid Token, and S is a TaintStore instance. Each check terminates: Check₁ performs constant-time comparisons; Check₂ iterates over a finite argument set with bounded query operations; Check₃ performs glob matching and counter lookup. No check contains unbounded loops or recursive calls. Therefore G always terminates and produces a result. ∎
+Ξ_capability ≤ B × k × TTL_max
 
-**(b) Determinism.** We verify each check uses only deterministic operations:
+and the reduction ratio satisfies:
 
-- Check₁: `now()` is a timestamp read (deterministic at call time); set membership (∈) on frozensets is deterministic; comparison (>) on floats is deterministic.
-- Check₂: `S.query(v)` computes SHA-256(normalize(v)) and performs dictionary lookup — both deterministic; comparison (>) on TaintLevel (an integer enum) is deterministic; iteration over `a` is over a finite, ordered structure.
-- Check₃: `match(path, globs)` is fnmatch — a deterministic string matching algorithm; `call_count(t)` reads a counter dictionary — deterministic; `causal_rule_of_two_violated(t)` evaluates a boolean expression over the CausalTaintTracker state — deterministic (by Theorem 3, the state is a deterministic function of the tool execution history).
+Ξ_capability / Ξ_ambient ≤ (k / |P₀|) × (B × TTL_max / T_session)
 
-None of these operations involves random number generation, sampling, or non-deterministic choice. G is the composition of deterministic functions, therefore G is deterministic. ∎
+### 4.5 Proof
 
-**(c) LLM-Independence.** Inspecting the computation of G:
-- Check₁ reads τ (a frozen dataclass created by CapabilityIssuer from event metadata), not from LLM output.
-- Check₂ reads S (populated by tool return value registration) and a (the LLM's proposed arguments). While `a` is generated by the LLM, G does not invoke the LLM to validate `a` — it validates `a` through deterministic hash comparison and policy lookup.
-- Check₃ reads τ.granted_paths and call counters — neither involves LLM inference.
+Ξ_capability = Σᵢ₌₁ᴮ |P_bᵢ| × Δᵢ ≤ Σᵢ₌₁ᴮ k × TTL_max = B × k × TTL_max
 
-At no point does G call an LLM, read LLM weights, or condition on LLM internal state. G's inputs (t, a, τ, S) may have been *influenced by* LLM output (the LLM chose t and a), but G's *evaluation* is entirely LLM-independent. ∎
+Dividing by Ξ_ambient = |P₀| × T_session:
 
-### 5.4 Security Implication
+Ξ_capability / Ξ_ambient ≤ (B × k × TTL_max) / (|P₀| × T_session) = (k / |P₀|) × (B × TTL_max / T_session) ∎
 
-Theorems 5(b) and 5(c) together guarantee **prompt injection immunity** of the CapabilityGate:
+### 4.6 Concrete Bound
 
-Since G is deterministic and LLM-independent, there is no input to G that can be manipulated through the LLM's token stream to alter G's decision. An adversary who successfully injects the LLM can influence *which* tool call (t, a) the LLM proposes, but cannot influence *how* G evaluates that proposal. The adversary cannot "convince" G to allow a tool call that G's policy would deny, because G does not process natural language and has no persuasion surface.
+With k = 5, |P₀| = 55, TTL_max = 300s, T_session = 86,400s:
+
+- If batches arrive at most once per TTL: B ≤ T_session / TTL_max = 288
+- Ξ_capability / Ξ_ambient ≤ (5/55) × (288 × 300 / 86,400) = 0.0909 × 1.0 = **0.0909**
+
+The event-scoped architecture exposes at most **9.1%** of the privilege surface of the ambient authority model under worst-case batch frequency. In practice, batches are typically shorter than TTL_max and k is often 2-3 (not 5), yielding significantly lower exposure.
+
+### 4.7 Note on Interpretation
+
+Privilege exposure Ξ is not a probability. It is a **structural measure of opportunity**: the total tool-time window during which an attacker who has achieved prompt injection could exploit a sensitive tool. A lower Ξ means the attacker has less opportunity to act — even if the injection succeeds.
