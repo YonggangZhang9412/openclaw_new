@@ -2,6 +2,14 @@
 
 The Agent Authority Impossibility shows that C1, C2, and C3 cannot coexist under ambient authority. Our resolution does not weaken any of these conditions. Instead, we **replace ambient authority with event-scoped capability authority**, dissolving the contradiction by ensuring that the agent's permissions are dynamically bound to the specific event it is processing, not to its session-level identity.
 
+**How the impossibility is dissolved.** Under our architecture, all three conditions are simultaneously satisfied:
+
+- **C1 is preserved**: The agent continues to autonomously process untrusted external data (emails, web content, API responses) without per-item human approval. No functionality is sacrificed.
+- **C2 is preserved**: The agent retains access to sensitive resources — filesystem, credentials, communication channels. However, this access is no longer *ambient* (granted for the entire session); it is *event-scoped* (granted per event batch, only for the specific paths and tools relevant to the current context, and automatically revoked after 300 seconds).
+- **C3 is now satisfied**: The CapabilityGate is pure deterministic code with zero LLM dependency. Security decisions — which tools are permitted, whether data taint levels are acceptable, whether the Rule of Two is satisfied — are made by dictionary lookups, hash comparisons, and boolean arithmetic. No natural language is interpreted; no ambiguity can arise.
+
+The contradiction dissolves because **the precondition of the impossibility — ambient authority — is removed**. The impossibility requires that the agent holds *static, session-wide* access to sensitive resources while processing untrusted data. Under event-scoped capability authority, the agent's access to sensitive resources is **automatically withdrawn** when processing events classified as untrusted. The agent can still access sensitive resources (C2) and still process untrusted data (C1), but never with the same token at the same time in a configuration that enables a complete attack chain.
+
 ### 3.1 Design principles derived from the impossibility
 
 Three principles follow logically from the impossibility theorem:
@@ -18,7 +26,11 @@ Principles 1-3 impose specific requirements on the underlying system architectur
 
 **Requirement A: Unforgeable event provenance** (from Principle 2).
 
-To scope authority to the current processing context, the capability issuer must know the *origin* and *trust level* of the event being processed. This requires metadata fields — source identifier, origin chain, trust classification — that are immutable once the event is created. In a request-response model, such metadata resides in HTTP headers, which are **forgeable by any client**. In our EventBus, events are frozen dataclasses whose `source`, `origin_chain`, and `cascade_depth` fields are set at creation time and cannot be modified by any consumer.
+To scope authority to the current processing context, the capability issuer must know the *origin* and *trust level* of the event being processed. This requires metadata fields — source identifier, origin chain, trust classification — that are immutable once the event is created and that are set exclusively by the framework, never by the caller.
+
+A request-response model can authenticate callers through signed tokens (OAuth, mTLS, JWTs), but authentication answers "who is the caller" — not "what triggered this processing context." An authenticated API request from the agent's own gateway carries the gateway's identity regardless of whether the underlying trigger was a user message, a cron job, a file change, or a webhook from an untrusted source. The trust-relevant metadata — *what kind of event initiated this action* — is not naturally represented in the request-response paradigm, because that paradigm models interactions as stateless caller-callee exchanges, not as typed events with provenance chains.
+
+In our EventBus, events are frozen dataclasses whose `source`, `origin_chain`, and `cascade_depth` fields are set at creation time by the framework itself and cannot be modified by any consumer. The distinction is not between "forgeable vs unforgeable headers" but between **"caller identity" (which request-response can authenticate) and "event provenance" (which requires a typed event model to represent)**.
 
 **Requirement B: Framework-enforced cascade depth** (from Principle 3).
 

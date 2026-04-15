@@ -36,9 +36,15 @@ The Nature Machine Intelligence editorial "Multi-agent AI systems need transpare
 
 The CapabilityGate enforces structural constraints — *which tools* can be called with *what data*. It does not evaluate the *semantic appropriateness* of the content written or actions taken within those constraints. An agent authorized to write to a configuration file can write malicious configuration content. Defense against semantic attacks requires application-layer validation (which our system supports through its config validation pipeline) or future advances in LLM alignment — and represents the boundary between structural security (our contribution) and behavioral safety (an orthogonal research direction).
 
-### 7.2 Taint evasion through complex reasoning
+### 7.2 Taint tracking: evasion and usability trade-offs
 
-While CausalTaintTracker provides causal-level defense against paraphrasing attacks, sophisticated LLM reasoning chains that synthesize external data with internal knowledge in multi-step processes may produce outputs whose connection to the original external data is undetectable at both content and causal levels. The rate of such evasion depends on the LLM's reasoning capabilities and the complexity of the synthesis. We expect this to be the primary residual attack vector and a critical direction for future research.
+The dual-layer taint tracking system presents two distinct limitations that pull in opposite directions:
+
+**Evasion risk (false negatives).** Sophisticated LLM reasoning chains that synthesize external data with internal knowledge in multi-step processes may produce outputs whose connection to the original external data is undetectable at the content level (TaintStore fingerprints do not match). CausalTaintTracker mitigates this at the context level, but — as discussed in Section 3.3 — it operates per event batch and resets between batches, leaving a cross-batch contamination gap.
+
+**Over-restriction risk (false positives).** CausalTaintTracker's coarse granularity creates a practical usability tension: once any external data enters the LLM's context within a single batch (e.g., the agent calls `web_fetch` to check weather), *all* subsequent external actions in that batch are blocked — including legitimate operations unrelated to the fetched content (e.g., sending a pre-composed work email). In practice, this means that batches mixing information retrieval and outbound communication will experience frequent false positives. Users may perceive the system as obstructive, potentially leading to workarounds that undermine the security model.
+
+This tension is fundamental, not incidental. A taint tracker that is precise enough to avoid false positives (tracking exactly which tokens derive from external data through the LLM's opaque reasoning process) would require interpretability capabilities that do not yet exist. A tracker that is conservative enough to eliminate false negatives (blocking all external actions whenever external data has ever been observed) would render the agent unusable for most practical workflows. Our dual-layer design — TaintStore for precision, CausalTaintTracker for recall — represents a pragmatic middle ground, but the optimal calibration of this trade-off remains an open research question.
 
 ### 7.3 Policy completeness
 
