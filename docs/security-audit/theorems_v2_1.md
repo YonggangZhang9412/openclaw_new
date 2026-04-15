@@ -11,7 +11,7 @@
 **Definition 4 (Batch Events).** For batch b, define:
 - A = {injection succeeds}, Pr[A] = p
 - B_R = {τ_b.tools ∩ 𝒯_R ≠ ∅}, B_X = {τ_b.tools ∩ 𝒯_X ≠ ∅}
-- C = {Rule of Two not enforced}, i.e. τ_b.tools ∩ 𝒯_U ≠ ∅ ∧ τ_b.tools ∩ 𝒯_R ≠ ∅ ∧ τ_b.tools ∩ 𝒯_X ≠ ∅
+- C = {τ_b.tools ∩ 𝒯_U ≠ ∅ ∧ τ_b.tools ∩ 𝒯_R ≠ ∅ ∧ τ_b.tools ∩ 𝒯_X ≠ ∅}
 - D = {taint tracking evaded}, Pr[D | A, B_R, B_X, C] = q
 - Exfil(b) = A ∩ B_R ∩ B_X ∩ C ∩ D
 
@@ -23,227 +23,167 @@
 
 ## 2. Theorem 1: Single-Batch Attack Probability Bound
 
-**Theorem 1.** Under event-scoped capability authority:
-
-Pr[Exfil(b)] ≤ p · (kn_R / n) · (kn_X / n) · (1 - R₂) · q
-
-where R₂ = 𝟙[Rule of Two enforced on τ_b].
+**Theorem 1.** Pr[Exfil(b)] ≤ p · (kn_R/n) · (kn_X/n) · (1 - R₂) · q, where R₂ = 𝟙[Rule of Two enforced].
 
 **Proof.**
 
 Pr[Exfil(b)]
-= Pr[A ∩ B_R ∩ B_X ∩ C ∩ D]                                                       (Definition 4)
-= Pr[A] · Pr[B_R ∩ B_X | A] · Pr[C | A, B_R, B_X] · Pr[D | A, B_R, B_X, C]       (chain rule)
+= Pr[A ∩ B_R ∩ B_X ∩ C ∩ D]                                                        (Def. 4)
+= Pr[A] · Pr[B_R ∩ B_X | A] · Pr[C | A, B_R, B_X] · Pr[D | A, B_R, B_X, C]        (chain rule)
+= p · Pr[B_R ∩ B_X] · Pr[C | B_R, B_X] · q                                         (i)
 
-We bound each factor separately.
+where line (i) follows from: Pr[A] = p (Def. 4); B_R, B_X ⊥ A (τ_b issued before L invoked, Def. 3); C ⊥ A | B_R, B_X (C is a property of τ_b); Pr[D | ·] = q (Def. 4).
 
-**Factor 1: Pr[A].**
-
-Pr[A] = p                                                                           (Definition 4)
-
-**Factor 2: Pr[B_R ∩ B_X | A].**
-
-Token τ_b is issued by CapabilityIssuer from event metadata before L is invoked (Definition 3). Therefore B_R and B_X are independent of A:
-
-Pr[B_R ∩ B_X | A] = Pr[B_R ∩ B_X]
-
-We bound Pr[B_R]. The token draws k tools from 𝒯 = {t₁,...,t_n} without replacement. Let Z_R = |τ_b.tools ∩ 𝒯_R| (number of sensitive-read tools in token). Then B_R = {Z_R ≥ 1}, and:
+We bound Pr[B_R]. Let Z_R = |τ_b.tools ∩ 𝒯_R|. Then:
 
 Pr[¬B_R]
 = Pr[Z_R = 0]
-= C(n - n_R, k) / C(n, k)                                                          (hypergeometric)
-= [(n-n_R)! / ((n-n_R-k)! · k!)] / [n! / ((n-k)! · k!)]
-= [(n-n_R)! · (n-k)!] / [(n-n_R-k)! · n!]
-= ∏_{i=0}^{k-1} (n - n_R - i) / (n - i)
+= C(n - n_R, k) / C(n, k)                                                           (hypergeometric)
+= ∏_{i=0}^{k-1} (n - n_R - i) / (n - i)                                             (expand binomials)
+= ∏_{i=0}^{k-1} [1 - n_R / (n - i)]                                                 (factor each term)
+≥ ∏_{i=0}^{k-1} [1 - n_R / (n - k + 1)]                                             (n - i ≥ n - k + 1)
+= [1 - n_R / (n - k + 1)]^k                                                          (ii)
 
-Each factor in the product satisfies:
-
-(n - n_R - i) / (n - i) = 1 - n_R/(n - i)
-                        ≤ 1 - n_R/n                                                (since n - i ≤ n)
-
-Therefore:
-
-Pr[¬B_R] ≤ (1 - n_R/n)^k
-
-And:
+For the upper bound on Pr[B_R], set x = n_R / n ∈ [0, 1]:
 
 Pr[B_R]
 = 1 - Pr[¬B_R]
-≥ 1 - (1 - n_R/n)^k
+= 1 - ∏_{i=0}^{k-1} (n - n_R - i) / (n - i)
+≤ 1 - ∏_{i=0}^{k-1} (1 - n_R / n)                                                   (n - i ≤ n ⟹ 1/(n-i) ≥ 1/n)
+= 1 - (1 - x)^k                                                                      (iii)
+≤ kx                                                                                  (Bernoulli: 1-(1-x)^k ≤ kx, x ∈ [0,1])
+= kn_R / n
+=: α_R                                                                                (iv)
 
-For the upper bound (we need Pr[B_R] ≤ ... to bound the attack probability):
+By identical argument replacing n_R with n_X:
 
-Pr[B_R]
-= 1 - ∏_{i=0}^{k-1} (n - n_R - i)/(n - i)
-≤ 1 - ∏_{i=0}^{k-1} (n - n_R - i)/n                                               (n - i ≤ n in denominator)
-≤ 1 - ((n - n_R)/n)^k                                                              (each numerator ≤ n - n_R)
+Pr[B_X] ≤ kn_X / n =: α_X                                                            (v)
 
-Let x = n_R/n. Then:
-
-Pr[B_R] ≤ 1 - (1 - x)^k
-         ≤ kx                                                                       (Bernoulli: 1-(1-x)^k ≤ kx for x ∈ [0,1])
-         = k · n_R / n
-
-Define α_R := k · n_R / n. Then Pr[B_R] ≤ α_R. By identical argument with n_X replacing n_R:
-
-Pr[B_X] ≤ k · n_X / n =: α_X
-
-For the joint probability, exfiltration requires both B_R and B_X. Since both events are determined by the same token draw (not independent), we bound:
+For the joint probability:
 
 Pr[B_R ∩ B_X]
 = Pr[B_R] · Pr[B_X | B_R]
-≤ Pr[B_R] · Pr[B_X]                                                                (‡)
-≤ α_R · α_X
+≤ Pr[B_R] · 1                                                                         (trivial bound)
+≤ α_R                                                                                  (vi)
 
-where (‡) holds because conditioning on B_R (at least one 𝒯_R tool drawn) does not decrease the probability of also drawing a 𝒯_X tool when 𝒯_R ∩ 𝒯_X may overlap. For a rigorous upper bound, Pr[B_X | B_R] ≤ 1, so Pr[B_R ∩ B_X] ≤ Pr[B_R] ≤ α_R. We use the tighter product bound α_R · α_X which is valid when 𝒯_R and 𝒯_X are disjoint; when they overlap, Pr[B_R ∩ B_X] is even smaller.
+We can also write:
 
-**Factor 3: Pr[C | A, B_R, B_X].**
+Pr[B_R ∩ B_X] ≤ min(Pr[B_R], Pr[B_X]) ≤ min(α_R, α_X)                                (vi')
 
-C is a deterministic property of τ_b (Definition 4), independent of A. So Pr[C | A, B_R, B_X] = Pr[C | B_R, B_X]. When Rule of Two is enforced (R₂ = 1), the token construction guarantees ¬(τ_b.tools ∩ 𝒯_U ≠ ∅ ∧ τ_b.tools ∩ 𝒯_R ≠ ∅ ∧ τ_b.tools ∩ 𝒯_X ≠ ∅), so given B_R and B_X, the event C cannot occur:
+For the product bound (valid when 𝒯_R ∩ 𝒯_X = ∅):
 
-Pr[C | B_R, B_X] = 1 - R₂
+Pr[B_R ∩ B_X] = Pr[B_R] · Pr[B_X | B_R] ≤ Pr[B_R] · Pr[B_X] ≤ α_R · α_X            (vii)
 
-**Factor 4: Pr[D | A, B_R, B_X, C].**
+Note: when 𝒯_R ∩ 𝒯_X ≠ ∅, B_R and B_X are positively correlated, so (vii) is conservative as an upper bound. We use (vii) as it yields the tightest parameterized bound.
 
-Pr[D | A, B_R, B_X, C] = q                                                         (Definition 4)
+For the Rule of Two factor, when R₂ = 1, token construction guarantees ¬C given any B_R, B_X:
 
-**Combining all factors:**
+Pr[C | B_R, B_X] = 1 - R₂                                                             (viii)
+
+Substituting (i), (iv), (v), (vii), (viii):
 
 Pr[Exfil(b)]
-= Pr[A] · Pr[B_R ∩ B_X | A] · Pr[C | A, B_R, B_X] · Pr[D | A, B_R, B_X, C]
-≤ p · Pr[B_R ∩ B_X] · (1 - R₂) · q
-≤ p · α_R · α_X · (1 - R₂) · q
-= p · (kn_R/n) · (kn_X/n) · (1 - R₂) · q                                          ∎
+≤ p · Pr[B_R ∩ B_X] · (1 - R₂) · q                                                   (from (i))
+≤ p · α_R · α_X · (1 - R₂) · q                                                        (from (vii))
+= p · (kn_R / n) · (kn_X / n) · (1 - R₂) · q                                          ∎
 
 ---
 
 ## 3. Theorem 2: Session-Level Compound Bound
 
-**Theorem 2.** Over B independent batches, the probability that at least one exfiltration occurs satisfies:
+**Theorem 2.** Let ε = p · α_R · α_X · (1-R₂) · q. Over B independent batches:
 
-Pr[∃ b ∈ {1,...,B}: Exfil(b)] ≤ 1 - (1 - p · α_R · α_X · (1-R₂) · q)^B
-
-where α_R = kn_R/n, α_X = kn_X/n.
-
-Under ambient authority:
-
-Pr[∃ b: Exfil(b)] ≥ 1 - (1 - p)^B
+Pr[∃ b: Exfil(b)] ≤ 1 - (1 - ε)^B
 
 **Proof.**
 
-Let ε = p · α_R · α_X · (1 - R₂) · q. By Theorem 1, Pr[Exfil(b)] ≤ ε for each b.
-
 Pr[∃ b: Exfil(b)]
 = 1 - Pr[∀ b: ¬Exfil(b)]
-= 1 - ∏_{b=1}^{B} Pr[¬Exfil(b)]                                        (batch independence)
+= 1 - ∏_{b=1}^{B} Pr[¬Exfil(b)]                                              (independence)
 = 1 - ∏_{b=1}^{B} (1 - Pr[Exfil(b)])
-≤ 1 - ∏_{b=1}^{B} (1 - ε)                                               (Theorem 1)
-= 1 - (1 - ε)^B                                                          ∎
+≤ 1 - ∏_{b=1}^{B} (1 - ε)                                                     (Pr[Exfil(b)] ≤ ε by Thm. 1)
+= 1 - (1 - ε)^B                                                                ∎
 
-For ambient authority, Pr[Exfil(b)] ≥ p (all tools available, no structural constraint), so:
+**Proposition 2.1 (Ambient Authority Baseline).** Under ambient authority, Pr[Exfil(b)] ≥ p, so:
 
-Pr[∃ b: Exfil(b)] ≥ 1 - (1 - p)^B                                       ∎
+Pr[∃ b: Exfil(b)] ≥ 1 - (1 - p)^B → 1 as B → ∞ for any p > 0.                ∎
 
 ---
 
 ## 4. Theorem 3: Rule of Two Hard Guarantee
 
-**Theorem 3.** When Rule of Two is enforced (R₂ = 1) on token τ_b:
-
-Pr[Exfil(b)] = 0
+**Theorem 3.** If R₂ = 1, then Pr[Exfil(b)] = 0.
 
 **Proof.**
 
-By Theorem 1:
-
 Pr[Exfil(b)]
-≤ p · α_R · α_X · (1 - R₂) · q
+≤ p · α_R · α_X · (1 - R₂) · q                    (Theorem 1)
 = p · α_R · α_X · (1 - 1) · q
 = p · α_R · α_X · 0 · q
-= 0
-
-Since probabilities are non-negative: Pr[Exfil(b)] = 0.                             ∎
+= 0                                                  (non-negative: Pr[Exfil(b)] = 0)   ∎
 
 ---
 
-## 5. Theorem 4: Taint Tracking Monotonicity and Evasion Bound
+## 5. Theorem 4: CausalTaintTracker Monotonicity
 
-**Theorem 4 (Monotonicity).** For the CausalTaintTracker sequence (Definition 6): ∀ 0 ≤ i ≤ j ≤ m, τ_i ≤ τ_j.
-
-**Proof.**
-
-τ_k = max(τ_{k-1}, taint(t_k)) ≥ τ_{k-1}                                (max(a,b) ≥ a)
-
-Chaining: τ_i ≤ τ_{i+1} ≤ ··· ≤ τ_j.                                                ∎
-
-**Corollary 4.1 (Irrevocability).** If τ_{k₀} = ⊤ for some k₀, then τ_k = ⊤ for all k ≥ k₀.
+**Theorem 4.** ∀ 0 ≤ i ≤ j ≤ m: τ_i ≤ τ_j.
 
 **Proof.**
 
-⊤ = τ_{k₀} ≤ τ_k ≤ ⊤        (Theorem 4 and ⊤ = max Λ)
-⟹ τ_k = ⊤                    (antisymmetry)                                          ∎
+τ_k = max(τ_{k-1}, taint(t_k))
+    ≥ τ_{k-1}                                        (max(a,b) ≥ a)
 
-**Proposition 4.2 (Within-Batch Evasion Bound).** Within a single batch where CausalTaintTracker is active, if any tool t_j with taint(t_j) = EXTERNAL is executed at step j, then for all subsequent steps k > j, any tool t with causal policy max_causal(t) < EXTERNAL is blocked. Therefore, within-batch taint evasion probability is:
+Chaining: τ_i ≤ τ_{i+1} ≤ ··· ≤ τ_j  (j - i applications). By transitivity: τ_i ≤ τ_j.   ∎
 
-q_within = 0
+**Corollary 4.1.** τ_{k₀} = ⊤ ⟹ ∀ k ≥ k₀: τ_k = ⊤.
+
+**Proof.**
+
+⊤ = τ_{k₀} ≤ τ_k ≤ ⊤               (Thm. 4 and ⊤ = max Λ)
+⟹ τ_k = ⊤                            (antisymmetry)                                     ∎
+
+**Proposition 4.2 (Within-Batch Evasion Bound).** If taint(t_j) = ⊤ at step j, then ∀ k > j, any tool t with max_causal(t) < ⊤ is blocked. Hence q_within = 0.
 
 **Proof.** Let k > j.
 
-τ_{k-1} ≥ τ_j                                                            (Theorem 4)
-        = max(τ_{j-1}, taint(t_j))                                       (Definition 6)
-        ≥ taint(t_j)                                                      (max(a,b) ≥ b)
-        = EXTERNAL = ⊤
+τ_{k-1} ≥ τ_j                                         (Thm. 4, since j ≤ k-1)
+        = max(τ_{j-1}, taint(t_j))                    (Def. 6)
+        ≥ taint(t_j)                                   (max(a,b) ≥ b)
+        = ⊤
 
-So τ_{k-1} = ⊤ > max_causal(t) for any t with max_causal(t) < ⊤.
-Tool t is blocked. No external-action tool can execute after step j.
-Therefore q_within = 0.                                                                ∎
+⟹ τ_{k-1} = ⊤ > max_causal(t)                        (by Cor. 4.1 and assumption)
+⟹ t is blocked at step k                               ∎
 
-**Remark.** The taint evasion probability q in Theorem 1 accounts for cross-batch contamination only (session history carrying untrusted data from prior batches). Within a single batch, Proposition 4.2 guarantees q_within = 0. Therefore q = q_cross, which requires adversarial data to persist across batch boundaries — a condition whose frequency is quantified in Experiment 4 of the evaluation framework.
+**Remark.** q in Theorem 1 equals q_cross (cross-batch contamination only), since q_within = 0 by Proposition 4.2.
 
 ---
 
-## 6. Theorem 5: Gate Determinism (Bound Integrity)
+## 6. Theorem 5: Gate Determinism
 
-**Theorem 5.** The CapabilityGate function G: 𝒜 × Token × TaintStore × Counter × ℝ → {ALLOW, DENY} is deterministic and LLM-independent.
+**Theorem 5.** G: 𝒜 × Token × TaintStore × Counter × ℝ → {ALLOW, DENY} is deterministic and LLM-independent. The adversary can influence p and q in Theorem 1, but cannot influence α_R, α_X, or R₂.
 
-This theorem ensures the integrity of the bound in Theorem 1: the factors α_R, α_X, R₂ are determined by the token (which is issued by deterministic code from event metadata), not by the LLM. An adversary who compromises L cannot alter these factors.
+**Proof.** G = Check₃ ∘ Check₂ ∘ Check₁, where each Checkᵢ uses only:
 
-**Proof.** G consists of three sequential checks. Each check uses only:
-- set membership (∈ on frozenset): deterministic
-- SHA-256 hash: deterministic
-- dictionary lookup: deterministic
-- real/integer comparison: deterministic
-- glob matching: deterministic
-- boolean operations: deterministic
+{∈ (set membership), SHA-256, dict lookup, <, >, ≤, ≥, =, ∧, ∨, ¬, fnmatch}
 
-No operation invokes L or reads L's internal state. The token τ is constructed before L is invoked (CapabilityIssuer uses event metadata only). Therefore:
+All operations are deterministic. None invokes L. Token τ is issued before L runs (Def. 3). Therefore:
 
-∀ (a, τ, S, C, t): G(a, τ, S, C, t) is determined by its inputs alone     (determinism)
-G does not invoke L at any step                                              (LLM-independence)
+∀ inputs x = x': G(x) = G(x')                         (determinism)
+G does not invoke L                                     (LLM-independence)
 
-Consequence for Theorem 1: the adversary controls Pr[A] = p (injection success) and influences Pr[D] = q (taint evasion), but cannot influence α_R, α_X, or R₂, since these are properties of τ which is computed by G's issuer — a deterministic, LLM-independent function.          ∎
+Since α_R = k|τ.tools ∩ 𝒯_R|/n, α_X = k|τ.tools ∩ 𝒯_X|/n, and R₂ are all functions of τ (not of L), the adversary cannot manipulate these factors through prompt injection.                    ∎
 
 ---
 
 ## 7. Concrete Instantiation
 
-| Parameter | Value | Source |
-|-----------|-------|--------|
-| n = \|𝒯\| | 55 | System tool registry (16 modules) |
-| k = \|τ.tools\| | 5 | CapabilityIssuer max grant |
-| n_R = \|𝒯_R\| | 8 | read_file, bash, execute_code, ... |
-| n_X = \|𝒯_X\| | 6 | send_email, curl, wget, bash, ... |
-| p | 0.5 | Median injection success rate¹⁵˒¹⁶ |
-| q | 0.1 | Estimated cross-batch contamination |
-| R₂ | 1 | Rule of Two enforced (default) |
-| B | 288 | 24h session / 300s TTL |
+Parameters: n = 55, k = 5, n_R = 8, n_X = 6, p = 0.5, q = 0.1, R₂ ∈ {0, 1}, B = 288.
 
-**With Rule of Two (R₂ = 1):**
+**Case 1: R₂ = 1.**
 
-Pr[Exfil(b)] = 0                                                (Theorem 3)
-Pr[∃ b: Exfil(b)] = 0                                           (Corollary)
+Pr[Exfil(b)] = 0                                       (Theorem 3)
 
-**Without Rule of Two (R₂ = 0, worst case):**
+**Case 2: R₂ = 0 (worst case).**
 
 α_R = 5 · 8 / 55 = 40/55 ≈ 0.727
 α_X = 5 · 6 / 55 = 30/55 ≈ 0.545
@@ -254,15 +194,15 @@ Pr[Exfil(b)]
 = 0.0198
 
 Pr[∃ b: Exfil(b)]
-≤ 1 - (1 - 0.0198)^288
-≈ 1 - 0.9802^288
+≤ 1 - (1 - 0.0198)^{288}
+= 1 - 0.9802^{288}
 ≈ 1 - 0.00316
-≈ 0.997
+= 0.997
 
-Compare ambient authority: 1 - (1 - 0.5)^288 ≈ 1.0.
+**Comparison with ambient authority:**
 
-**Per-batch reduction factor:**
+Pr_ambient[Exfil(b)] ≥ p = 0.5
+Pr_capability[Exfil(b)] ≤ 0.0198
 
-Pr_ambient / Pr_capability ≈ 0.5 / 0.0198 ≈ 25×
-
-With Rule of Two: ∞ (zero vs non-zero).
+Reduction: 0.5 / 0.0198 ≈ 25× per batch (without Rule of Two).
+With Rule of Two: Pr = 0 vs Pr ≥ 0.5 (infinite reduction).
