@@ -45,7 +45,7 @@ The `EVENT_TOOL_GRANTS` mapping and `DEFAULT_TOOL_POLICIES` are manually curated
 
 ### 7.5 Formal verification
 
-The structural argument (Section 2.3) and the Rule of Two's scope are presented as informal logical analyses. Full formal verification using model checking or theorem proving (TLA+, Coq) remains future work. The CapabilityGate's deterministic nature makes it particularly amenable to such verification.
+We provide formal definitions, theorem statements, and proofs for the core claims in Supplementary Notes 1-4: the Agent Authority Impossibility (Theorem 1), Rule of Two sufficiency (Theorem 2), CausalTaintTracker monotonicity (Theorem 3), privilege exposure bound (Theorem 4), and Gate determinism (Theorem 5). These proofs operate over the mathematical model defined in the Supplementary; full machine-verified proofs using theorem provers (TLA+, Coq, Lean) remain future work.
 
 ---
 
@@ -96,6 +96,8 @@ For each tool call `(tool_name, tool_args)` proposed by the LLM:
 ### TaintStore registration and query
 
 On tool execution, the return value is registered: `TaintStore.register(content, taint_level, origin_tool)`. Registration computes a SHA-256 fingerprint of the normalized content (first 16 hex characters), extracts substrings matching email/URL/path patterns for content >5KB, and stores the record with a TTL of 600 seconds. Maximum capacity: 10,000 records with LRU eviction. Query follows a short-circuit strategy: boundary markers → fingerprint match → substring match → None (unknown, fail-open).
+
+The complementary CausalTaintTracker updates via τ_round(k) = max(τ_round(k-1), τ_result(k)), which we prove is monotonically non-decreasing (Supplementary Note 3, Theorem 3). Once τ_round reaches EXTERNAL, it remains EXTERNAL for the remainder of the batch — formalizing the "irrevocable contamination" property.
 
 ### Code and data availability
 

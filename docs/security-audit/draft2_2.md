@@ -22,7 +22,7 @@ The consequences of delayed transition are graver. SQL injection corrupted datab
 
 ### 2.3 The structural argument
 
-We now state the Agent Authority Problem precisely. We frame this as a **structural security argument** — an informal but rigorous logical analysis whose formal treatment (including explicit adversarial models) is provided in Supplementary Note 1.
+We now state the Agent Authority Problem precisely. We frame this as a **structural security argument** with formal treatment (definitions, theorem statement, and proof) provided in Supplementary Note 1.
 
 > **The Agent Authority Problem.** Under the ambient authority model — where an agent inherits a static set of permissions for the duration of a session — no security mechanism can simultaneously satisfy:
 >

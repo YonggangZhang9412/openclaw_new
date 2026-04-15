@@ -42,7 +42,7 @@ These principles impose specific requirements on the underlying architecture tha
 
 **Layer 2 (Taint tracking).** Tool return values are registered in a TaintStore with origin and taint level (USER=0, INTERNAL=1, EXTERNAL=2). When the LLM uses a value as a tool argument, the Gate checks whether its taint exceeds the tool's policy. A complementary CausalTaintTracker marks the entire processing round as contaminated once any EXTERNAL data enters the LLM's context — providing a fail-safe backstop against LLM paraphrasing that evades content-level fingerprinting. TaintStore provides precision (parameter-level blocking); CausalTaintTracker provides recall (context-level blocking). Together, an attacker must evade both layers simultaneously.
 
-**Layer 3 (Rule of Two).** Every successful data exfiltration attack requires three conditions: (1) untrusted input processed, (2) sensitive data accessed, (3) external action executed. The Rule of Two constrains the token so at most two conditions hold simultaneously within a single event batch. This is sufficient to prevent complete attack chains within that batch scope (see Section 7.3 for cross-batch scope limitations).
+**Layer 3 (Rule of Two).** We prove formally (Supplementary Note 2, Theorem 2) that every exfiltration attack — defined as a tool invocation sequence that causes sensitive data to cross the system boundary — necessarily requires three conditions: (1) untrusted input processed (U), (2) sensitive data accessed (S), (3) external action executed (X). The Rule of Two constrains the token so at most two of {U, S, X} hold simultaneously within a single event batch. By the contrapositive of Theorem 2, no exfiltration attack can complete under this constraint (see Section 7.3 for cross-batch scope limitations).
 
 > **[Figure 3]** **(a)** Rule of Two constraint space: three conditions as a Venn diagram; any two may overlap, but the triple intersection (complete attack chain) is structurally excluded. **(b)** Attack chain comparison: under ambient authority, a single successful injection yields full tool access and completes the chain; under event-scoped capability, the chain must pass through five barriers (tool visibility, TTL, path scoping, taint check, Rule of Two), of which three are **deterministic** (tool visibility, TTL, path scoping — guaranteed by code invariants) and two are **structural** (taint tracking, Rule of Two — dependent on correct policy categorization).
 
@@ -50,11 +50,9 @@ These principles impose specific requirements on the underlying architecture tha
 
 The architecture achieves five properties:
 
-**Determinism.** Every Gate decision is a deterministic function of its inputs — enabling exhaustive testing, formal verification, and reproducible auditing.
+**Determinism and prompt injection immunity.** We prove (Supplementary Note 4, Theorem 5) that the CapabilityGate function G is total, deterministic, and LLM-independent — it performs set membership checks, hash comparisons, and boolean arithmetic without invoking any LLM inference. Since G has no natural language processing surface, adversarial prompt injections cannot influence its decisions.
 
-**Prompt injection immunity.** The Gate performs dictionary lookups, hash comparisons, and boolean arithmetic. It does not interpret natural language and cannot be "convinced" to change its decision.
-
-**Automatic privilege decay.** Tokens expire after 300s. Each event batch starts from zero authority.
+**Automatic privilege decay.** Tokens expire after 300 seconds. We prove (Supplementary Note 3, Theorem 4) that event-scoped authority reduces cumulative privilege exposure to at most 9.1% of the ambient authority model under worst-case assumptions (k=5 tools per batch, 55 system-wide tools, 24h session).
 
 **Fail-safe defaults.** TaintStore is fail-open (unknown sources allowed), but CausalTaintTracker is fail-safe (contamination is irrevocable within a batch). Unmapped event types receive the most restrictive token.
 
