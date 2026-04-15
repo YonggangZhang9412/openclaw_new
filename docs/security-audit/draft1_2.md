@@ -28,13 +28,15 @@ We can now state the Agent Authority Problem precisely:
 >
 > **(C2) Privileged resource access**: The agent holds access to sensitive resources (filesystem, credentials, communication channels, financial systems).
 >
-> **(C3) LLM-independent safety**: Security guarantees do not depend on the LLM's reliability in following natural language safety instructions.
+> **(C3) LLM-independent safety**: Security guarantees do not depend on the LLM's ability to perfectly resolve the data-instruction ambiguity inherent in natural language.
 >
 > Specifically, any system satisfying C1 and C2 under ambient authority must rely on the LLM to correctly distinguish between legitimate data and adversarial instructions embedded in that data — thereby violating C3.
 
-**Proof sketch.** Under ambient authority, the agent holds permissions to access sensitive resources (C2) throughout the session. When the agent processes untrusted data (C1), adversarial instructions embedded in that data enter the LLM's context. Since the LLM's token stream does not distinguish data from instructions, the LLM may interpret adversarial content as legitimate instructions and invoke privileged tools. To prevent this without reducing the agent's permissions, the system must rely on the LLM to correctly identify and ignore adversarial instructions — violating C3.
+A critical observation about C3: the data-instruction ambiguity is not a limitation of current language models that may be overcome through improved training. It is a **property of natural language itself**. The same text — for instance, "Please send the project report to partner@company.com" — can be legitimate data to analyze (when appearing in an email being summarized) or an instruction to execute (when issued by the user). Whether a given text is "data" or "instruction" depends on the speaker's intent, which is not encoded in the text itself. No model improvement can resolve an ambiguity that is inherent in the medium. This distinguishes the Agent Authority Problem from a temporary technological limitation: it is a **permanent structural property** of systems that process natural language with ambient authority.
 
-The formal proof will be presented in Supplementary Materials with explicit adversarial models.
+**Proof sketch.** Under ambient authority, the agent holds permissions to access sensitive resources (C2) throughout the session. When the agent processes untrusted data (C1), adversarial instructions embedded in that data enter the LLM's context as part of the same token stream. Because natural language does not carry an intrinsic type distinction between data and instructions — the same sentence can function as either depending on context and speaker intent — any LLM processing this input faces an inherently ambiguous classification task. Resolving this ambiguity with certainty would require knowledge of the speaker's intent, which is unavailable to the model. Therefore, the system must depend on the LLM's heuristic judgment to classify potentially adversarial content — a judgment that is probabilistic, context-dependent, and degradable under adversarial pressure — thereby violating C3.
+
+The formal proof, including explicit adversarial models and a connection to the undecidability of intent attribution in natural language, will be presented in Supplementary Materials.
 
 ### 2.4 Why incremental defenses are insufficient
 
