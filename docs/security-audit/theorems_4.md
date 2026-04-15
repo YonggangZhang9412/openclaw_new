@@ -2,7 +2,7 @@
 
 ## Definitions
 
-**Definition 18 (Privilege Exposure).** For an agent system with permission model P: 𝒮 → 𝒫(𝒯) operating over a session divided into N discrete time intervals, the privilege exposure is:
+**Definition 22 (Privilege Exposure).** For an agent system with permission model P: 𝒮 → 𝒫(𝒯) operating over a session divided into N discrete time intervals, the privilege exposure is:
 
 Ξ = Σₖ₌₁ᴺ |P(sₖ)| · Δtₖ     ... (Ξ-def)
 

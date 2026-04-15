@@ -4,11 +4,11 @@
 
 We extend the formal model of Supplementary Note 1.
 
-**Definition 8 (Data Item).** A data item is a pair d = (content, label) where content ∈ {0,1}* is an arbitrary byte string and label ∈ {PUBLIC, SENSITIVE}. Let D_S = {d ∈ D | d.label = SENSITIVE}.
+**Definition 10 (Data Item).** A data item is a pair d = (content, label) where content ∈ {0,1}* is an arbitrary byte string and label ∈ {PUBLIC, SENSITIVE}. Let D_S = {d ∈ D | d.label = SENSITIVE}.
 
-**Definition 9 (System Boundary).** The system boundary ∂ partitions all storage locations into Internal and External. We write ℓ(d) for the storage location of data item d.
+**Definition 11 (System Boundary).** The system boundary ∂ partitions all storage locations into Internal and External. We write ℓ(d) for the storage location of data item d.
 
-**Definition 10 (Tool Classification).** Each tool t ∈ 𝒯 is classified by three predicates:
+**Definition 12 (Tool Classification).** Each tool t ∈ 𝒯 is classified by three predicates:
 - reads_sensitive(t) ≡ ∃ d ∈ D_S: d ∈ PossibleOutputs(t)
 - sends_external(t) ≡ ∃ ℓ ∈ External: ℓ ∈ PossibleDestinations(t)
 - receives_untrusted(t) ≡ ∃ d: source(d) ∉ Trusted ∧ d ∈ PossibleIntroductions(t)
@@ -20,13 +20,13 @@ We define:
 
 These sets may overlap. For compound tools (e.g., bash): bash ∈ 𝒯_R ∩ 𝒯_X is possible.
 
-**Definition 11 (Data Flow Relation).** For a tool invocation sequence σ = ((t₁, a₁), ..., (tₘ, aₘ)), we define the data flow relation →_σ over data items:
+**Definition 13 (Data Flow Relation).** For a tool invocation sequence σ = ((t₁, a₁), ..., (tₘ, aₘ)), we define the data flow relation →_σ over data items:
 
 d →_σ d' ≡ ∃ i, j with i ≤ j: d ∈ result(tᵢ, aᵢ) ∧ d.content ⊑ d'.content ∧ d' ∈ transmitted(tⱼ, aⱼ)
 
 where ⊑ denotes the substring relation on byte strings (d.content is a contiguous subsequence of d'.content). Intuitively, d →_σ d' means data item d, produced by tool invocation i, has its content (or content containing it) transmitted by tool invocation j.
 
-**Definition 12 (Adversary-Triggered Exfiltration).** A tool invocation sequence σ executed within a single event batch constitutes an adversary-triggered exfiltration if and only if:
+**Definition 14 (Adversary-Triggered Exfiltration).** A tool invocation sequence σ executed within a single event batch constitutes an adversary-triggered exfiltration if and only if:
 
 **(E1)** ∃ d_u ∈ data(state(batch)): source(d_u) ∉ Trusted ∧ ∃ a ∈ 𝒜: Pr[L(s) = a] ≠ Pr[L(s \ {d_u}) = a]
 
@@ -36,17 +36,17 @@ where ⊑ denotes the substring relation on byte strings (d.content is a contigu
 
 That is: (E1) adversarial influence is present, (E2) some tool reads sensitive data, and (E3) sensitive data flows to an external destination through the data flow relation.
 
-**Definition 13 (Batch-Level Condition Predicates).** For a CapabilityToken τ:
+**Definition 15 (Batch-Level Condition Predicates).** For a CapabilityToken τ:
 
 - U(τ) ≡ τ.granted_tools ∩ 𝒯_U ≠ ∅
 - S(τ) ≡ τ.granted_tools ∩ 𝒯_R ≠ ∅
 - X(τ) ≡ τ.granted_tools ∩ 𝒯_X ≠ ∅
 
-**Definition 14 (Rule of Two Constraint).** Token τ satisfies the Rule of Two if:
+**Definition 16 (Rule of Two Constraint).** Token τ satisfies the Rule of Two if:
 
 ¬(U(τ) ∧ S(τ) ∧ X(τ))     ... (R2)
 
-**Definition 15 (Exfiltration Feasibility).** For a token τ under Gate enforcement, define:
+**Definition 17 (Exfiltration Feasibility).** For a token τ under Gate enforcement, define:
 
 Φ(τ) = 𝟙[U(τ)] · 𝟙[S(τ)] · 𝟙[X(τ)]
 
@@ -60,45 +60,45 @@ That is: (E1) adversarial influence is present, (E2) some tool reads sensitive d
 
 Assume for contradiction that σ is an adversary-triggered exfiltration under token τ satisfying (R2), with no cross-batch contamination.
 
-**Step 1.** By E2 (Definition 12):
+**Step 1.** By E2 (Definition 14):
 
 ∃ i ∈ {1,...,m}: tᵢ ∈ 𝒯_R ∧ result(tᵢ, aᵢ) ∩ D_S ≠ ∅                  ... (1)
 
 By Gate enforcement: tᵢ ∈ τ.granted_tools. Combining with tᵢ ∈ 𝒯_R:
 
 τ.granted_tools ∩ 𝒯_R ⊇ {tᵢ} ≠ ∅                                       ... (2)
-⟹ S(τ) = true     [by Definition 13]                                   ... (3)
+⟹ S(τ) = true     [by Definition 15]                                   ... (3)
 
-**Step 2.** By E3 (Definition 12):
+**Step 2.** By E3 (Definition 14):
 
 ∃ d_s ∈ D_S, ∃ j ∈ {1,...,m}: d_s →_σ d' ∧ d' ∈ transmitted(tⱼ, aⱼ)    ... (4)
 
-Since transmitted(tⱼ, aⱼ) ≠ ∅, by Definition 10: sends_external(tⱼ) = true, so tⱼ ∈ 𝒯_X. By Gate enforcement: tⱼ ∈ τ.granted_tools. Therefore:
+Since transmitted(tⱼ, aⱼ) ≠ ∅, by Definition 12: sends_external(tⱼ) = true, so tⱼ ∈ 𝒯_X. By Gate enforcement: tⱼ ∈ τ.granted_tools. Therefore:
 
 τ.granted_tools ∩ 𝒯_X ⊇ {tⱼ} ≠ ∅                                       ... (5)
-⟹ X(τ) = true     [by Definition 13]                                   ... (6)
+⟹ X(τ) = true     [by Definition 15]                                   ... (6)
 
-**Step 3.** By E1 (Definition 12):
+**Step 3.** By E1 (Definition 14):
 
 ∃ d_u ∈ data(state(batch)): source(d_u) ∉ Trusted                       ... (7)
 
 By the no-cross-batch assumption, d_u was introduced by some tₖ in σ:
 
-receives_untrusted(tₖ) = true ⟹ tₖ ∈ 𝒯_U     [by Definition 10]       ... (8)
+receives_untrusted(tₖ) = true ⟹ tₖ ∈ 𝒯_U     [by Definition 12]       ... (8)
 
 By Gate enforcement: tₖ ∈ τ.granted_tools. Therefore:
 
 τ.granted_tools ∩ 𝒯_U ⊇ {tₖ} ≠ ∅                                       ... (9)
-⟹ U(τ) = true     [by Definition 13]                                   ... (10)
+⟹ U(τ) = true     [by Definition 15]                                   ... (10)
 
-**Step 4.** Collecting (3), (6), (10) and computing Φ(τ) (Definition 15):
+**Step 4.** Collecting (3), (6), (10) and computing Φ(τ) (Definition 17):
 
 Φ(τ) = 𝟙[U(τ)] · 𝟙[S(τ)] · 𝟙[X(τ)]
      = 𝟙[true] · 𝟙[true] · 𝟙[true]         [by (3), (6), (10)]
      = 1 · 1 · 1
      = 1                                                                  ... (11)
 
-But τ satisfies (R2), so by Definition 15:
+But τ satisfies (R2), so by Definition 17:
 
 Φ(τ) = 0                                                                 ... (12)
 

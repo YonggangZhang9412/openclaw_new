@@ -47,21 +47,22 @@ Useful(ℳ) ≡ ∃ s_b ∈ Reach(ℳ), ∃ t_s ∈ 𝒯_s, ∃ a_b ∈ Vals(Par
 
 ## Assumptions
 
-**Assumption 1 (LLM Manipulability).** For any t ∈ P₀, there exists adversarial d* and a* ∈ Vals(Params(t)) such that incorporating d* into a reachable state s yields s* with:
+**Assumption 1 (LLM Manipulability).** For any t ∈ P₀ and any target argument vector a ∈ Vals(Params(t)), there exists adversarial data d* such that incorporating d* into a reachable state s₀ yields s* = s₀ ∪ {d*} with:
 
-Pr[L(s*) = (t, a*)] > 0
+(A1a)  Pr[L(s*) = (t, a)] > 0
+(A1b)  Pr[L(s₀) = (t, a)] ≠ Pr[L(s*) = (t, a)]
 
-Empirical support: prompt injection benchmarks report 20-80% success rates across major LLM families¹⁵˒¹⁶. Assumption 1 requires only Pr > 0, strictly weaker than observed rates.
+That is, the adversary can craft d* to induce L to produce any specific tool invocation with non-zero probability, and d*'s presence causally affects L's output distribution. Empirical support: prompt injection benchmarks report 20-80% success rates across major LLM families for diverse target actions¹⁵˒¹⁶. (A1a) requires only Pr > 0, strictly weaker than observed rates. (A1b) follows from the adversarial construction: if d* had no causal effect, it would not serve as an injection vector.
 
 **Assumption 2 (Argument Mimicry).** For any t ∈ 𝒯_s, for any legitimate a_b ∈ Vals(Params(t)) satisfying E((t, a_b), s_b) = ALLOW at some benign state s_b, there exists adversarial a* ∈ Vals(Params(t)) such that:
 
 ∀ s ∈ 𝒮: E((t, a_b), s) = E((t, a*), s)          ... (*)
 
-**Definition 9 (Safety Violation Probability).** For a state s ∈ 𝒮, define the safety violation probability:
+**Definition 9 (Safety Violation Probability).** For a state s ∈ 𝒮, define:
 
-V(s) = Σ_{(t,a) ∈ 𝒜: t ∈ 𝒯_s ∧ InfluencedByAdversary(s,t,a)} Pr[L(s) = (t,a)] · 𝟙[E((t,a), s) = ALLOW]
+V(s) = Pr_{(t,a) ~ L(s)} [t ∈ 𝒯_s ∧ InfluencedByAdversary(s, t, a) ∧ E((t, a), s) = ALLOW]
 
-V(s) measures the probability that L proposes a sensitive, adversary-influenced tool invocation that E permits. Safe(ℳ) (Definition 6) is equivalent to V(s) = 0 for all s ∈ Reach(ℳ).
+V(s) is the probability that L proposes a sensitive, adversary-influenced tool invocation that E permits. Note that Safe(ℳ) (Definition 6) holds if and only if V(s) = 0 for all s ∈ Reach(ℳ).
 
 ## Theorem
 
@@ -80,65 +81,59 @@ Fix such s_b, t_s, a_b. By C2 and ambient authority:
 
 t_s ∈ P(s_b) ∩ 𝒯_s = P₀ ∩ 𝒯_s                                         ... (1')
 
-**Step 2.** By C1, ∃ s₀ ∈ Reach(ℳ) with data(s₀) ≠ ∅. Since t_s ∈ P₀ (by (1')), Assumption 1 gives:
+**Step 2.** By Assumption 2 applied to (t_s, a_b) from (1), ∃ a* ∈ Vals(Params(t_s)):
 
-∃ d*, a*₁ ∈ Vals(Params(t_s)):
-    Pr[L(s₀ ∪ {d*}) = (t_s, a*₁)] > 0                                  ... (2a)
+∀ s ∈ 𝒮: E((t_s, a*), s) = E((t_s, a_b), s)                            ... (2)
 
-Let s* = s₀ ∪ {d*}. By construction of d* (chosen to induce the output):
+**Step 3.** By C1, ∃ s₀ ∈ Reach(ℳ) with data(s₀) ≠ ∅. Since t_s ∈ P₀ (by (1')), apply Assumption 1 with target (t_s, a*) from (2):
 
-Pr[L(s₀) = (t_s, a*₁)] ≠ Pr[L(s*) = (t_s, a*₁)]                       ... (2b)
+∃ d*: Pr[L(s₀ ∪ {d*}) = (t_s, a*)] > 0                                 (A1a)
+      Pr[L(s₀) = (t_s, a*)] ≠ Pr[L(s₀ ∪ {d*}) = (t_s, a*)]            (A1b)
 
-**Step 3.** By Assumption 2 applied to (t_s, a_b) from (1), define the equivalence class:
+Let s* = s₀ ∪ {d*}. Then:
 
-[a_b]_E = {a ∈ Vals(Params(t_s)) | ∀ s ∈ 𝒮: E((t_s, a), s) = E((t_s, a_b), s)}
+Pr[L(s*) = (t_s, a*)] > 0                                               ... (3)
+Pr[L(s₀) = (t_s, a*)] ≠ Pr[L(s*) = (t_s, a*)]                          ... (4)
 
-By Assumption 2, [a_b]_E contains all syntactically valid arguments for t_s. By Assumption 1, the adversary can induce L to produce any (t_s, a) with a ∈ Vals(Params(t_s)). Take a* ∈ [a_b]_E with Pr[L(s*) = (t_s, a*)] > 0. Then:
+**Step 4.** We derive E's decision at s*. By C3 and ambient authority:
 
-∀ s ∈ 𝒮: E((t_s, a*), s) = E((t_s, a_b), s)                            ... (3)
-Pr[L(s*) = (t_s, a*)] > 0                                               ... (4)
-Pr[L(s₀) = (t_s, a*)] ≠ Pr[L(s*) = (t_s, a*)]                          ... (5)
-
-where (3) holds by a* ∈ [a_b]_E, (4) by Assumption 1, and (5) by the same argument as (2b).
-
-**Step 4.** We now derive E's decision at s*. By C3 (Definition 8) and ambient authority:
-
-P(s_b) = P(s*) = P₀                                                     ... (6)
+P(s_b) = P(s*) = P₀                                                     ... (5)
 
 Applying C3 to (t_s, a_b):
 
-E((t_s, a_b), s_b) = E((t_s, a_b), s*)     [by (6) and C3]             ... (7)
+E((t_s, a_b), s_b) = E((t_s, a_b), s*)     [by (5) and C3]             ... (6)
 
-Applying (3) at s = s*:
+Applying (2) at s = s*:
 
-E((t_s, a*), s*) = E((t_s, a_b), s*)                                    ... (8)
+E((t_s, a*), s*) = E((t_s, a_b), s*)                                    ... (7)
 
-Chaining (1), (7), (8):
+Chaining (1), (6), (7):
 
-E((t_s, a*), s*) = E((t_s, a_b), s*)    [by (8)]
-                 = E((t_s, a_b), s_b)    [by (7)]
-                 = ALLOW                  [by (1)]                       ... (9)
+E((t_s, a*), s*) = E((t_s, a_b), s*)    [by (7)]
+                 = E((t_s, a_b), s_b)    [by (6)]
+                 = ALLOW                  [by (1)]                       ... (8)
 
 **Step 5.** We verify InfluencedByAdversary(s*, t_s, a*) (Definition 6). Take d = d*:
 
 source(d*) ∉ Trusted                                  [by construction]
 s* \ {d*} = s₀                                        [by definition of s*]
-Pr[L(s*) = (t_s, a*)] ≠ Pr[L(s₀) = (t_s, a*)]       [by (5)]
+Pr[L(s*) = (t_s, a*)] ≠ Pr[L(s₀) = (t_s, a*)]       [by (4)]
 
 All conditions of Definition 6 are satisfied:
 
-InfluencedByAdversary(s*, t_s, a*) = true                                ... (10)
+InfluencedByAdversary(s*, t_s, a*) = true                                ... (9)
 
-**Step 6.** We now compute V(s*) (Definition 9). The term (t_s, a*) contributes:
+**Step 6.** We compute V(s*) (Definition 9). Since (t_s, a*) satisfies all three conditions in V's definition:
 
-V(s*) ≥ Pr[L(s*) = (t_s, a*)] · 𝟙[E((t_s, a*), s*) = ALLOW]
-         · 𝟙[t_s ∈ 𝒯_s] · 𝟙[InfluencedByAdversary(s*, t_s, a*)]
-      = Pr[L(s*) = (t_s, a*)] · 1 · 1 · 1                              [by (9), (1'), (10)]
-      = Pr[L(s*) = (t_s, a*)]                                           [by (4)]
-      > 0                                                                ... (11)
+V(s*) = Pr_{(t,a) ~ L(s*)} [t ∈ 𝒯_s ∧ Influenced ∧ E = ALLOW]
+      ≥ Pr[L(s*) = (t_s, a*)]
+         · 𝟙[t_s ∈ 𝒯_s] · 𝟙[InfluencedByAdversary(s*, t_s, a*)] · 𝟙[E((t_s, a*), s*) = ALLOW]
+      = Pr[L(s*) = (t_s, a*)] · 1 · 1 · 1                              [by (1'), (9), (8)]
+      = Pr[L(s*) = (t_s, a*)]
+      > 0                                                                [by (3)]    ... (10)
 
-Therefore V(s*) > 0, which means ¬Safe(ℳ) (Definition 9). ∎
+Therefore V(s*) > 0, so ¬Safe(ℳ) (by Definition 9). ∎
 
 ## Remark on Scope
 
-Theorem 1 is conditional on (i) ambient authority, (ii) data-instruction conflation, and (iii) Assumptions 1-2. Our architecture resolves the impossibility by replacing ambient authority with event-scoped authority: when s contains untrusted data, P(s) is restricted to exclude 𝒯_s, so Step 1 cannot produce a state where both t_s ∈ P(s) and adversarial data coexist. Equation (6) no longer holds because P(s_b) ≠ P(s*), breaking the chain at Step 4.
+Theorem 1 is conditional on (i) ambient authority, (ii) data-instruction conflation, and (iii) Assumptions 1-2. Our architecture resolves the impossibility by replacing ambient authority with event-scoped authority: when s contains untrusted data, P(s) is restricted to exclude 𝒯_s. Equation (5) no longer holds (P(s_b) ≠ P(s*)), breaking the equality chain at Step 4. As a result, E((t_s, a*), s*) is no longer constrained to equal ALLOW, and V(s*) = 0 becomes achievable.

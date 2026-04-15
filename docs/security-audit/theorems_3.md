@@ -2,7 +2,7 @@
 
 ## Definitions
 
-**Definition 14 (Taint Lattice).** Let (Λ, ≤) be a totally ordered set Λ = {USER, INTERNAL, EXTERNAL} with USER < INTERNAL < EXTERNAL. Λ forms a bounded lattice with ⊥ = USER, ⊤ = EXTERNAL, meet a ∧ b = min(a, b), and join a ∨ b = max(a, b).
+**Definition 18 (Taint Lattice).** Let (Λ, ≤) be a totally ordered set Λ = {USER, INTERNAL, EXTERNAL} with USER < INTERNAL < EXTERNAL. Λ forms a bounded lattice with ⊥ = USER, ⊤ = EXTERNAL, meet a ∧ b = min(a, b), and join a ∨ b = max(a, b).
 
 **Fact (Lattice Properties).** For all a, b ∈ Λ:
 - (F1) max(a, b) ≥ a  (by definition of max on a total order)
@@ -10,9 +10,9 @@
 - (F3) a ≤ ⊤ = EXTERNAL  (EXTERNAL is the top element)
 - (F4) a = ⊤ ∧ b ≤ ⊤ ⟹ max(a, b) = ⊤  (top absorbs)
 
-**Definition 15 (Tool Taint Assignment).** Each tool t ∈ 𝒯 has a fixed taint level taint: 𝒯 → Λ defined by the trust classification of t's data source. Concretely: taint(read_file) = INTERNAL, taint(web_fetch) = EXTERNAL, taint(memory_search) = USER.
+**Definition 19 (Tool Taint Assignment).** Each tool t ∈ 𝒯 has a fixed taint level taint: 𝒯 → Λ defined by the trust classification of t's data source. Concretely: taint(read_file) = INTERNAL, taint(web_fetch) = EXTERNAL, taint(memory_search) = USER.
 
-**Definition 16 (CausalTaintTracker).** A CausalTaintTracker for a batch of m tool executions is a sequence (τ₀, τ₁, ..., τₘ) ∈ Λᵐ⁺¹ defined inductively:
+**Definition 20 (CausalTaintTracker).** A CausalTaintTracker for a batch of m tool executions is a sequence (τ₀, τ₁, ..., τₘ) ∈ Λᵐ⁺¹ defined inductively:
 
 τ₀ = ⊥ = USER     ... (init)
 τₖ = max(τₖ₋₁, taint(tₖ))     for k = 1, ..., m     ... (update)
@@ -48,7 +48,7 @@ Therefore τₖ = ⊤ = EXTERNAL (by antisymmetry of ≤). ∎
 
 ## Proposition 1: Causal Blocking Guarantee
 
-**Definition 17 (Causal Policy).** A causal policy for tool t specifies a maximum causal taint level max_causal(t) ∈ Λ. Tool t is **causally allowed** at step k if τₖ₋₁ ≤ max_causal(t), and **causally blocked** if τₖ₋₁ > max_causal(t).
+**Definition 21 (Causal Policy).** A causal policy for tool t specifies a maximum causal taint level max_causal(t) ∈ Λ. Tool t is **causally allowed** at step k if τₖ₋₁ ≤ max_causal(t), and **causally blocked** if τₖ₋₁ > max_causal(t).
 
 **Proposition 1 (Causal Blocking).** Let t be a tool with max_causal(t) = τ_max ∈ Λ. Let tₖ₀ be a tool executed at step k₀ with taint(tₖ₀) = τ_high where τ_high > τ_max. Then for all k > k₀, tool t is causally blocked at step k.
 
@@ -61,6 +61,6 @@ Therefore τₖ = ⊤ = EXTERNAL (by antisymmetry of ≤). ∎
      > τ_max                               [by assumption: τ_high > τ_max]
      = max_causal(t)                       [by assumption]
 
-Therefore τₖ₋₁ > max_causal(t), so t is causally blocked at step k (Definition 17). ∎
+Therefore τₖ₋₁ > max_causal(t), so t is causally blocked at step k (Definition 21). ∎
 
 **Instantiation.** In our architecture, external-action tools have max_causal(t) = INTERNAL, and web_fetch has taint(web_fetch) = EXTERNAL. Since EXTERNAL > INTERNAL, Proposition 1 yields: after web_fetch executes at step k₀, all external-action tools are causally blocked at every subsequent step k > k₀ within the same batch.
