@@ -12,74 +12,113 @@
 - 𝒯 is a finite set of tool signatures (Definition 1)
 - 𝒜 = {(t, a) | t ∈ 𝒯, a ∈ Vals(Params(t))} is the set of concrete tool invocations
 - δ: 𝒮 × 𝒜 → 𝒮 is the state transition function
-- L: 𝒮 → Δ(𝒜 ∪ {⊥}) is the LLM planning function, mapping the current state to a probability distribution over tool invocations or ⊥ (no action). L is stochastic and opaque.
+- L: 𝒮 → Δ(𝒜 ∪ {⊥}) is the LLM planning function, mapping the current state to a probability distribution over tool invocations or ⊥ (no action)
 - E: 𝒜 × 𝒮 → {ALLOW, DENY} is the safety enforcement function
 
-**Definition 4 (Permission Model).** A permission model is a function P: 𝒮 → 𝒫(𝒯) assigning a set of permitted tools to each state. We distinguish:
-- **Ambient authority**: P(s) = P₀ for all reachable s ∈ 𝒮 (constant)
-- **Event-scoped authority**: P may vary with s
+**Definition 4 (Permission Model).** A permission model is a function P: 𝒮 → 𝒫(𝒯) assigning a set of permitted tools to each state. Under **ambient authority**: P(s) = P₀ for all reachable s ∈ 𝒮.
 
-**Definition 5 (Data-Instruction Conflation).** An agent system ℳ exhibits data-instruction conflation if the LLM's output distribution is sensitive to untrusted data in the state. Formally: there exist states s, s' ∈ 𝒮 differing only in their untrusted data component such that L(s) ≠ L(s'), i.e.,
+**Definition 5 (Data-Instruction Conflation).** ℳ exhibits data-instruction conflation if:
 
 ∃ s, s' ∈ 𝒮, ∃ a ∈ 𝒜: s \ data(s) = s' \ data(s') ∧ Pr[L(s) = a] ≠ Pr[L(s') = a]
 
-where data(s) ⊂ s denotes the untrusted external data present in state s. Intuitively, the LLM cannot be isolated from the data it processes.
+where data(s) ⊂ s denotes the untrusted external data present in state s.
 
-**Definition 6 (Conditions C1, C2, C3).**
+**Definition 6 (Safety).** An agent system ℳ with enforcement function E is safe if no adversary-influenced tool invocation of a sensitive tool is permitted:
+
+Safe(ℳ) ≡ ∀ s ∈ Reach(ℳ), ∀ (t, a) ∈ 𝒜:
+  [t ∈ 𝒯_s ∧ InfluencedByAdversary(s, t, a)] ⟹ E((t, a), s) = DENY
+
+where InfluencedByAdversary(s, t, a) holds when ∃ d ∈ data(s) with source(d) ∉ Trusted such that removing d from s would change L's probability of outputting (t, a):
+
+InfluencedByAdversary(s, t, a) ≡ ∃ d ∈ data(s): source(d) ∉ Trusted ∧ Pr[L(s) = (t,a)] ≠ Pr[L(s \ {d}) = (t,a)]
+
+**Definition 7 (Utility).** An agent system ℳ with enforcement function E has utility if the operator can effectively use sensitive tools for legitimate purposes:
+
+Useful(ℳ) ≡ ∃ s_b ∈ Reach(ℳ), ∃ t_s ∈ 𝒯_s, ∃ a_b ∈ Vals(Params(t_s)):
+  E((t_s, a_b), s_b) = ALLOW
+
+**Definition 8 (Conditions C1, C2, C3).**
 
 **(C1)** ∃ s ∈ Reach(ℳ): data(s) ≠ ∅ ∧ ∀ d ∈ data(s): source(d) ∉ Trusted ∧ approved(d) = false
 
-(The agent reaches a state containing untrusted, unapproved external data.)
-
-**(C2)** ∀ s ∈ Reach(ℳ): P(s) ∩ 𝒯_s ≠ ∅
-
-(In every reachable state, the agent has access to at least one sensitive tool.)
+**(C2)** Useful(ℳ) ∧ [∀ s ∈ Reach(ℳ): P(s) ∩ 𝒯_s ≠ ∅]
 
 **(C3)** ∀ a ∈ 𝒜, ∀ s₁, s₂ ∈ 𝒮: P(s₁) = P(s₂) ⟹ E(a, s₁) = E(a, s₂)
 
-(The enforcement function's decision depends only on the invocation and the permission set — it does not inspect LLM context, reasoning trace, or data provenance.)
-
 ## Assumptions
 
-**Assumption 1 (LLM Manipulability).** For any tool invocation (t, a) with t ∈ P₀, there exists adversarial data d* such that, when d* is incorporated into state s yielding s*:
+**Assumption 1 (LLM Manipulability).** For any t ∈ P₀, there exists adversarial d* and a* ∈ Vals(Params(t)) such that incorporating d* into a reachable state s yields s* with:
 
-Pr[L(s*) = (t, a)] > 0
+Pr[L(s*) = (t, a*)] > 0
 
-Empirical support: indirect prompt injection benchmarks report attack success rates of 20-80% across GPT-4, Claude, Gemini, and Llama model families on tool-integrated agent tasks¹⁵˒¹⁶. CaMeL¹² reports that without defenses, 100% of benchmark attacks succeed on some models. Assumption 1 requires only that this probability is non-zero, which is strictly weaker than observed rates.
+Empirical support: prompt injection benchmarks report 20-80% success rates across major LLM families¹⁵˒¹⁶. Assumption 1 requires only Pr > 0, strictly weaker than observed rates.
 
-**Assumption 2 (Argument Mimicry).** For any t ∈ 𝒯_s and legitimate argument vector a_b ∈ Vals(Params(t)), there exists adversarial a* ∈ Vals(Params(t)) such that a_b and a* lie in the same equivalence class under E's observable inputs:
+**Assumption 2 (Argument Mimicry).** For any t ∈ 𝒯_s, for any legitimate a_b ∈ Vals(Params(t)) satisfying E((t, a_b), s_b) = ALLOW at some benign state s_b, there exists adversarial a* ∈ Vals(Params(t)) such that:
 
-∀ s ∈ 𝒮: E((t, a_b), s) = E((t, a*), s)
-
-That is, E cannot distinguish a_b from a* without access to information beyond (t, a, P(s)) — specifically, without access to the provenance of a's values within L's reasoning context.
+∀ s ∈ 𝒮: E((t, a_b), s) = E((t, a*), s)          ... (*)
 
 ## Theorem
 
-**Theorem 1 (Agent Authority Impossibility).** Let ℳ be an agent system (Definition 3) with ambient authority P(s) = P₀ exhibiting data-instruction conflation (Definition 5). Under Assumptions 1 and 2, conditions C1, C2, and C3 (Definition 6) cannot be simultaneously satisfied.
+**Theorem 1 (Agent Authority Impossibility).** Let ℳ be an agent system with ambient authority P(s) = P₀ exhibiting data-instruction conflation. Under Assumptions 1 and 2, Safe(ℳ) and C1 ∧ C2 ∧ C3 cannot simultaneously hold.
 
 ## Proof
 
-Assume for contradiction that C1 ∧ C2 ∧ C3 hold.
+Assume for contradiction that Safe(ℳ) holds and C1 ∧ C2 ∧ C3 hold simultaneously.
 
-**Step 1.** By C2, ∃ t_s ∈ P₀ ∩ 𝒯_s. Fix such a t_s.
+**Step 1 (Existence of sensitive tool access).**
 
-**Step 2.** By C1, ∃ s_u ∈ Reach(ℳ) with data(s_u) ≠ ∅ and source(d) ∉ Trusted for some d ∈ data(s_u). By Definition 5 (conflation), L's output distribution is sensitive to data(s_u). By Assumption 1, ∃ d* such that the modified state s* satisfies Pr[L(s*) = (t_s, a*)] > 0 for some a* ∈ Vals(Params(t_s)).
+By C2 (Definition 8), Useful(ℳ) holds. By Definition 7:
 
-**Step 3.** Consider two scenarios producing tool invocations evaluated by E:
-- *Benign*: L(s_b) = (t_s, a_b) with probability p_b > 0 (legitimate user intent)
-- *Adversarial*: L(s*) = (t_s, a*) with probability p* > 0 (injection-induced, Step 2)
+∃ s_b ∈ Reach(ℳ), ∃ t_s ∈ 𝒯_s, ∃ a_b ∈ Vals(Params(t_s)): E((t_s, a_b), s_b) = ALLOW     ... (1)
 
-By Assumption 2, E((t_s, a_b), s_b) = E((t_s, a*), s*) since a_b and a* are in the same E-equivalence class. Denote this common decision as D.
+Fix such s_b, t_s, a_b. Note that t_s ∈ 𝒯_s and t_s ∈ P₀ (by C2, P(s_b) ∩ 𝒯_s ≠ ∅, and P(s_b) = P₀ under ambient authority).
 
-**Step 4.** Case analysis on D:
-- **D = ALLOW**: E permits both the legitimate and adversarial invocations of t_s. Since t_s ∈ 𝒯_s, the adversarial invocation accesses sensitive resources, violating safety. But E has allowed it — so the system is unsafe despite E being present.
-- **D = DENY**: E blocks all invocations of t_s with arguments in this equivalence class. Since a_b is a legitimate argument, the operator loses the ability to use t_s for its intended purpose. This means P₀ ∩ 𝒯_s is not effectively accessible — contradicting C2 in practice (the tool is permitted but unusable).
-- **E distinguishes based on provenance**: E inspects which state component generated a (was it user intent or injected data?). This requires E(a, s₁) ≠ E(a, s₂) for some s₁, s₂ with P(s₁) = P(s₂) — violating C3 (Definition 6).
+**Step 2 (Existence of adversarial invocation).**
 
-All cases lead to contradiction. Therefore C1 ∧ C2 ∧ C3 is unsatisfiable under ambient authority with data-instruction conflation. ∎
+By C1 (Definition 8), ∃ s_u ∈ Reach(ℳ) with data(s_u) ≠ ∅ and untrusted data present. Since t_s ∈ P₀, by Assumption 1:
+
+∃ d*, a*: Pr[L(s*) = (t_s, a*)] > 0     ... (2)
+
+where s* is the state with d* incorporated. Since Pr > 0, L can produce (t_s, a*) at s* with non-zero probability. This invocation will be evaluated by E.
+
+**Step 3 (Enforcement equivalence).**
+
+By Assumption 2 applied to t_s, a_b (from Step 1), there exists a* satisfying (*):
+
+∀ s ∈ 𝒮: E((t_s, a_b), s) = E((t_s, a*), s)     ... (3)
+
+In particular, instantiating (3) at s = s_b:
+
+E((t_s, a*), s_b) = E((t_s, a_b), s_b) = ALLOW     (by (1) and (3))     ... (4)
+
+And instantiating (3) at s = s*:
+
+E((t_s, a*), s*) = E((t_s, a_b), s*)     ... (5)
+
+**Step 4 (Applying C3).**
+
+By C3 (Definition 8), E depends only on the invocation and the permission set. Under ambient authority, P(s_b) = P(s*) = P₀. Therefore:
+
+E((t_s, a_b), s_b) = E((t_s, a_b), s*)     (by C3, since P(s_b) = P(s*) = P₀)     ... (6)
+
+Combining (5) and (6):
+
+E((t_s, a*), s*) = E((t_s, a_b), s*) = E((t_s, a_b), s_b) = ALLOW     (by (6) and (1))     ... (7)
+
+**Step 5 (Contradiction with Safety).**
+
+From (2): Pr[L(s*) = (t_s, a*)] > 0, so (t_s, a*) can be invoked at s*.
+From (7): E((t_s, a*), s*) = ALLOW, so E permits this invocation.
+From construction of s*: d* ∈ data(s*), source(d*) ∉ Trusted, and Pr[L(s*) = (t_s, a*)] ≠ Pr[L(s* \ {d*}) = (t_s, a*)] (by Assumption 1, d* was chosen to cause L to produce this invocation).
+
+Therefore InfluencedByAdversary(s*, t_s, a*) holds (Definition 6).
+
+We now have: t_s ∈ 𝒯_s ∧ InfluencedByAdversary(s*, t_s, a*) ∧ E((t_s, a*), s*) = ALLOW.
+
+By Definition 6 (Safety), Safe(ℳ) requires E((t_s, a*), s*) = DENY. But (7) gives E((t_s, a*), s*) = ALLOW.
+
+Contradiction. ∎
 
 ## Remark on Scope
 
-Theorem 1 is conditional on (i) ambient authority, (ii) data-instruction conflation, and (iii) Assumptions 1-2. A system achieving perfect channel separation (violating Definition 5) or perfect argument authentication (violating Assumption 2) would escape the theorem. As discussed in Section 2.3 of the main text, both conditions hold for all deployed agent systems as of 2026.
-
-Our architecture resolves Theorem 1 by replacing ambient authority with event-scoped authority: when s contains untrusted data (C1 holds), P(s) is restricted to exclude 𝒯_s, so C2 is relaxed to "the agent has access to sensitive tools only when not processing untrusted data." The enforcement dilemma of Step 4 does not arise because E no longer faces the benign/adversarial ambiguity — the tools are simply not in the permission set.
+Theorem 1 is conditional on (i) ambient authority, (ii) data-instruction conflation, and (iii) Assumptions 1-2. Our architecture resolves the impossibility by replacing ambient authority with event-scoped authority: when s contains untrusted data, P(s) is restricted to exclude 𝒯_s, so Step 1 cannot produce a state where both t_s ∈ P(s) and adversarial data coexist. Equation (6) no longer holds because P(s_b) ≠ P(s*), breaking the chain at Step 4.
