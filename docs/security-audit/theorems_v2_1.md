@@ -89,24 +89,51 @@ Pr[Exfil(b)]
 
 ---
 
+
 ## 3. Theorem 2: Session-Level Compound Bound
 
 **Theorem 2.** Let ε = p · α_R · α_X · (1-R₂) · q. Over B independent batches:
 
-Pr[∃ b: Exfil(b)] ≤ 1 - (1 - ε)^B
+Pr[∃ b ∈ {1,...,B}: Exfil(b)] ≤ 1 - (1 - ε)^B
 
 **Proof.**
 
 Pr[∃ b: Exfil(b)]
-= 1 - Pr[∀ b: ¬Exfil(b)]
-= 1 - ∏_{b=1}^{B} Pr[¬Exfil(b)]                                              (independence)
+= 1 - Pr[¬Exfil(1) ∩ ¬Exfil(2) ∩ ··· ∩ ¬Exfil(B)]                            (complement)
+= 1 - ∏_{b=1}^{B} Pr[¬Exfil(b)]                                                (batches independent: distinct tokens, disjoint time windows)
+= 1 - ∏_{b=1}^{B} (1 - Pr[Exfil(b)])                                            (Pr[¬X] = 1 - Pr[X])
+
+Since Pr[Exfil(b)] ≤ ε for each b (Theorem 1):
+
+1 - Pr[Exfil(b)] ≥ 1 - ε                                                        (monotonicity of subtraction)
+
+Therefore:
+
+∏_{b=1}^{B} (1 - Pr[Exfil(b)])
+≥ ∏_{b=1}^{B} (1 - ε)                                                            (each factor ≥ 1 - ε)
+= (1 - ε)^B
+
+Substituting:
+
+Pr[∃ b: Exfil(b)]
 = 1 - ∏_{b=1}^{B} (1 - Pr[Exfil(b)])
-≤ 1 - ∏_{b=1}^{B} (1 - ε)                                                     (Pr[Exfil(b)] ≤ ε by Thm. 1)
-= 1 - (1 - ε)^B                                                                ∎
+≤ 1 - (1 - ε)^B                                                                   ∎
 
-**Proposition 2.1 (Ambient Authority Baseline).** Under ambient authority, Pr[Exfil(b)] ≥ p, so:
+**Proposition 2.1 (Ambient Authority Baseline).**
 
-Pr[∃ b: Exfil(b)] ≥ 1 - (1 - p)^B → 1 as B → ∞ for any p > 0.                ∎
+Pr_amb[Exfil(b)]
+≥ Pr[A]                                              (all tools available, no R₂, no taint tracking)
+= p
+
+Pr_amb[∃ b: Exfil(b)]
+= 1 - ∏_{b=1}^{B} (1 - Pr_amb[Exfil(b)])
+≥ 1 - ∏_{b=1}^{B} (1 - p)                            (Pr_amb[Exfil(b)] ≥ p)
+= 1 - (1 - p)^B
+
+lim_{B→∞} [1 - (1-p)^B]
+= 1 - lim_{B→∞} (1-p)^B
+= 1 - 0                                               (|1-p| < 1 for p > 0)
+= 1                                                                                ∎
 
 ---
 
@@ -117,10 +144,21 @@ Pr[∃ b: Exfil(b)] ≥ 1 - (1 - p)^B → 1 as B → ∞ for any p > 0.         
 **Proof.**
 
 Pr[Exfil(b)]
-≤ p · α_R · α_X · (1 - R₂) · q                    (Theorem 1)
-= p · α_R · α_X · (1 - 1) · q
+≤ p · α_R · α_X · (1 - R₂) · q                      (Theorem 1)
+= p · α_R · α_X · (1 - 1) · q                        (R₂ = 1)
 = p · α_R · α_X · 0 · q
-= 0                                                  (non-negative: Pr[Exfil(b)] = 0)   ∎
+= 0
+
+0 ≤ Pr[Exfil(b)] ≤ 0                                  (probability axiom + above)
+⟹ Pr[Exfil(b)] = 0                                                                 ∎
+
+**Corollary 3.1.** If R₂ = 1 for all B batches:
+
+Pr[∃ b: Exfil(b)]
+≤ 1 - (1 - 0)^B                                       (Theorem 2 with ε = 0)
+= 1 - 1^B
+= 1 - 1
+= 0                                                                                 ∎
 
 ---
 
@@ -128,51 +166,116 @@ Pr[Exfil(b)]
 
 **Theorem 4.** ∀ 0 ≤ i ≤ j ≤ m: τ_i ≤ τ_j.
 
+**Proof.** For any k ∈ {1, ..., m}:
+
+τ_k = max(τ_{k-1}, taint(t_k))                        (Definition 6)
+    ≥ τ_{k-1}                                          (max(a,b) ≥ a for all a,b ∈ Λ)
+
+Applying this at k = i+1, i+2, ..., j:
+
+τ_i ≤ τ_{i+1}                                          (k = i+1)
+     ≤ τ_{i+2}                                         (k = i+2)
+     ≤ ···
+     ≤ τ_j                                             (k = j)
+
+By transitivity of ≤ on Λ:
+
+τ_i ≤ τ_j                                                                           ∎
+
+**Corollary 4.1 (Irrevocability).** If τ_{k₀} = ⊤ for some k₀, then ∀ k ≥ k₀: τ_k = ⊤.
+
 **Proof.**
 
-τ_k = max(τ_{k-1}, taint(t_k))
-    ≥ τ_{k-1}                                        (max(a,b) ≥ a)
+τ_k ≥ τ_{k₀}                                           (Theorem 4, k₀ ≤ k)
+    = ⊤                                                 (assumption)
 
-Chaining: τ_i ≤ τ_{i+1} ≤ ··· ≤ τ_j  (j - i applications). By transitivity: τ_i ≤ τ_j.   ∎
+τ_k ≤ ⊤                                                 (⊤ = max Λ, so ∀ x ∈ Λ: x ≤ ⊤)
 
-**Corollary 4.1.** τ_{k₀} = ⊤ ⟹ ∀ k ≥ k₀: τ_k = ⊤.
+Combining:
 
-**Proof.**
+⊤ ≤ τ_k ≤ ⊤
+⟹ τ_k = ⊤                                              (antisymmetry of ≤)          ∎
 
-⊤ = τ_{k₀} ≤ τ_k ≤ ⊤               (Thm. 4 and ⊤ = max Λ)
-⟹ τ_k = ⊤                            (antisymmetry)                                     ∎
+**Proposition 4.2 (Within-Batch Evasion).** If taint(t_j) = ⊤ at step j, then q_within = 0.
 
-**Proposition 4.2 (Within-Batch Evasion Bound).** If taint(t_j) = ⊤ at step j, then ∀ k > j, any tool t with max_causal(t) < ⊤ is blocked. Hence q_within = 0.
+**Proof.** Let k > j. Then k - 1 ≥ j.
 
-**Proof.** Let k > j.
+τ_{k-1} ≥ τ_j                                           (Theorem 4, j ≤ k-1)
+         = max(τ_{j-1}, taint(t_j))                     (Definition 6)
+         ≥ taint(t_j)                                    (max(a,b) ≥ b)
+         = ⊤                                             (assumption)
 
-τ_{k-1} ≥ τ_j                                         (Thm. 4, since j ≤ k-1)
-        = max(τ_{j-1}, taint(t_j))                    (Def. 6)
-        ≥ taint(t_j)                                   (max(a,b) ≥ b)
-        = ⊤
+⟹ τ_{k-1} = ⊤                                           (Corollary 4.1)
 
-⟹ τ_{k-1} = ⊤ > max_causal(t)                        (by Cor. 4.1 and assumption)
-⟹ t is blocked at step k                               ∎
+For any tool t with max_causal(t) = INTERNAL < ⊤:
 
-**Remark.** q in Theorem 1 equals q_cross (cross-batch contamination only), since q_within = 0 by Proposition 4.2.
+τ_{k-1} = ⊤ = EXTERNAL
+        > INTERNAL
+        = max_causal(t)
+
+⟹ τ_{k-1} > max_causal(t)
+⟹ t is causally blocked at step k
+
+This holds ∀ k > j and ∀ t ∈ 𝒯_X (all external-action tools have max_causal ≤ INTERNAL). No external transmission can occur after step j within this batch.
+
+∴ q_within = Pr[within-batch taint evasion] = 0                                      ∎
+
+**Remark.** q in Theorem 1 decomposes as q = q_within + q_cross - q_within · q_cross. Since q_within = 0: q = q_cross.
 
 ---
 
-## 6. Theorem 5: Gate Determinism
+## 6. Theorem 5: Gate Determinism and Bound Integrity
 
-**Theorem 5.** G: 𝒜 × Token × TaintStore × Counter × ℝ → {ALLOW, DENY} is deterministic and LLM-independent. The adversary can influence p and q in Theorem 1, but cannot influence α_R, α_X, or R₂.
+**Theorem 5.** G: 𝒜 × Token × TaintStore × Counter × ℝ≥₀ → {ALLOW, DENY} is deterministic and LLM-independent.
 
-**Proof.** G = Check₃ ∘ Check₂ ∘ Check₁, where each Checkᵢ uses only:
+**Proof (Determinism).** G = Check₃ ∘ Check₂ ∘ Check₁. Each Checkᵢ is a composition of:
 
-{∈ (set membership), SHA-256, dict lookup, <, >, ≤, ≥, =, ∧, ∨, ¬, fnmatch}
+Check₁:  {>, ∈, ∈}                  (real comparison, set membership ×2)
+Check₂:  {SHA-256, dict.lookup, >}  (per parameter, |args| iterations)
+Check₃:  {fnmatch, ≥, boolean}     (glob match, counter compare, R₂ eval)
 
-All operations are deterministic. None invokes L. Token τ is issued before L runs (Def. 3). Therefore:
+Let x = (a, τ, S, C, t_now) = x'. Then:
 
-∀ inputs x = x': G(x) = G(x')                         (determinism)
-G does not invoke L                                     (LLM-independence)
+Check₁(x):  t_now > τ.issued_at + τ.ttl   → same t_now, same τ → same result
+            t ∈ τ.granted_tools            → same t, same τ → same result
+            t ∈ τ.denied_tools             → same t, same τ → same result
+⟹ Check₁(x) = Check₁(x')
 
-Since α_R = k|τ.tools ∩ 𝒯_R|/n, α_X = k|τ.tools ∩ 𝒯_X|/n, and R₂ are all functions of τ (not of L), the adversary cannot manipulate these factors through prompt injection.                    ∎
+Check₂(x):  ∀ (p,v) ∈ args:
+              SHA-256(v) = SHA-256(v')     (same v → same hash)
+              S.lookup(h) = S'.lookup(h')  (same S, same h → same tl)
+              tl > max_taint               (same tl, same policy → same result)
+⟹ Check₂(x) = Check₂(x')
 
+Check₃(x):  fnmatch(path, globs) = fnmatch(path', globs')   (same inputs)
+            C[t] = C'[t']                                     (same counter)
+            R₂(τ) = R₂(τ')                                    (same token)
+⟹ Check₃(x) = Check₃(x')
+
+∴ G(x) = G(x')                                                (determinism)       ∎
+
+**Proof (LLM-Independence).** G's input sources:
+
+a = (t, args)  ← output of L, but G does not invoke L to evaluate a
+τ              ← CapabilityIssuer(event_metadata); L not involved
+S              ← framework registers tool returns; L not involved
+C              ← framework counter; L not involved
+t_now          ← wall clock; L not involved
+
+Operations within G:  {SHA-256, ∈, dict.lookup, >, <, ≥, ≤, =, fnmatch, ∧, ∨, ¬}
+∩ {operations that invoke L} = ∅
+
+∴ G is LLM-independent                                                             ∎
+
+**Corollary 5.1 (Bound Integrity).**
+
+α_R = k · n_R / n = f(k, n_R, n)                      (constants, not functions of L)
+α_X = k · n_X / n = f(k, n_X, n)                      (same)
+R₂ = 𝟙[Rule of Two on τ_b] = g(τ_b)                  (function of token, not L)
+τ_b = CapabilityIssuer(event_metadata)                 (L not invoked, Def. 3 + Thm. 5)
+
+Adversary controls: p (via injection quality), q (via paraphrasing skill)
+Adversary cannot control: α_R, α_X, R₂ (determined before L runs)                  ∎
 ---
 
 ## 7. Concrete Instantiation
