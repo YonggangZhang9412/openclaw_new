@@ -5,7 +5,7 @@
 We distinguish between two categories of security barriers, which must not be conflated:
 
 **Deterministic barriers** — enforced by code with mathematical certainty:
-- *Tool visibility*: Ungranted tools are absent from the LLM's tool schema. The LLM cannot invoke a tool it does not know exists. Reduction: 2-5 of 45+ tools per batch (~9-22×).
+- *Tool visibility*: Ungranted tools are absent from the LLM's tool schema. The LLM cannot invoke a tool it does not know exists. Reduction: 2-5 of 55 system-wide tools per batch (55 tools distributed across 16 module categories as enumerated in the tool registry; ~11-27× reduction).
 - *Temporal window*: Token TTL of 300s is enforced by timestamp comparison. For a 24h agent, this represents ~288× temporal reduction per token window.
 - *Path scoping*: File operations outside `granted_paths` are rejected by glob matching.
 
@@ -71,4 +71,4 @@ Transitioning from ambient authority to event-driven capability security entails
 
 **Migration path.** Incremental adoption is possible: existing agents can wrap their tool-calling layer with a CapabilityGate without restructuring the entire application. Full EventBus integration provides the strongest guarantees but can be adopted progressively.
 
-**Usability impact.** As discussed in Section 5.1 of the limitations, the CausalTaintTracker's coarse granularity may block legitimate operations. User-facing permission prompts and configurable trust policies are necessary to balance security with productivity.
+**Usability impact.** As discussed in Section 7.2, the CausalTaintTracker's coarse granularity may block legitimate operations. User-facing permission prompts and configurable trust policies are necessary to balance security with productivity.
