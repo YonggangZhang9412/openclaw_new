@@ -65,78 +65,80 @@ Empirical support: prompt injection benchmarks report 20-80% success rates acros
 
 Assume for contradiction that Safe(ℳ) holds and C1 ∧ C2 ∧ C3 hold simultaneously.
 
-**Step 1 (Existence of sensitive tool access).**
+**Step 1.** By C2 and Definition 7 (Useful):
 
-By C2 (Definition 8), Useful(ℳ) holds. By Definition 7:
+∃ s_b ∈ Reach(ℳ), ∃ t_s ∈ 𝒯_s, ∃ a_b ∈ Vals(Params(t_s)):
+    E((t_s, a_b), s_b) = ALLOW                                          ... (1)
 
-∃ s_b ∈ Reach(ℳ), ∃ t_s ∈ 𝒯_s, ∃ a_b ∈ Vals(Params(t_s)): E((t_s, a_b), s_b) = ALLOW     ... (1)
+Fix such s_b, t_s, a_b. By C2 and ambient authority:
 
-Fix such s_b, t_s, a_b. Note that t_s ∈ 𝒯_s and t_s ∈ P₀ (by C2, P(s_b) ∩ 𝒯_s ≠ ∅, and P(s_b) = P₀ under ambient authority).
+t_s ∈ P(s_b) ∩ 𝒯_s = P₀ ∩ 𝒯_s                                         ... (1')
 
-**Step 2 (Existence of adversarial invocation).**
+**Step 2.** By C1, ∃ s₀ ∈ Reach(ℳ) with data(s₀) ≠ ∅. Since t_s ∈ P₀ (by (1')), Assumption 1 gives:
 
-By C1 (Definition 8), ∃ s_u ∈ Reach(ℳ) with data(s_u) ≠ ∅ and untrusted data present. Let s₀ be a reachable state before adversarial data is introduced. Since t_s ∈ P₀, by Assumption 1:
+∃ d*, a*₁ ∈ Vals(Params(t_s)):
+    Pr[L(s₀ ∪ {d*}) = (t_s, a*₁)] > 0                                  ... (2a)
 
-∃ d*, a*₁: Pr[L(s*) = (t_s, a*₁)] > 0     ... (2a)
+Let s* = s₀ ∪ {d*}. By construction of d* (chosen to induce the output):
 
-where s* = s₀ ∪ {d*}. Moreover, since d* was specifically chosen to induce this output:
+Pr[L(s₀) = (t_s, a*₁)] ≠ Pr[L(s*) = (t_s, a*₁)]                       ... (2b)
 
-Pr[L(s₀) = (t_s, a*₁)] ≠ Pr[L(s*) = (t_s, a*₁)]     ... (2b)
+**Step 3.** By Assumption 2 applied to (t_s, a_b) from (1), define the equivalence class:
 
-(If the probabilities were equal, d* would have no causal influence and could be replaced by a d* that does.)
+[a_b]_E = {a ∈ Vals(Params(t_s)) | ∀ s ∈ 𝒮: E((t_s, a), s) = E((t_s, a_b), s)}
 
-**Step 3 (Combining Assumptions 1 and 2).**
+By Assumption 2, [a_b]_E contains all syntactically valid arguments for t_s. By Assumption 1, the adversary can induce L to produce any (t_s, a) with a ∈ Vals(Params(t_s)). Take a* ∈ [a_b]_E with Pr[L(s*) = (t_s, a*)] > 0. Then:
 
-By Assumption 2 applied to t_s and a_b (from Step 1), there exists a*₂ in the same E-equivalence class as a_b:
+∀ s ∈ 𝒮: E((t_s, a*), s) = E((t_s, a_b), s)                            ... (3)
+Pr[L(s*) = (t_s, a*)] > 0                                               ... (4)
+Pr[L(s₀) = (t_s, a*)] ≠ Pr[L(s*) = (t_s, a*)]                          ... (5)
 
-∀ s ∈ 𝒮: E((t_s, a_b), s) = E((t_s, a*₂), s)     ... (3a)
+where (3) holds by a* ∈ [a_b]_E, (4) by Assumption 1, and (5) by the same argument as (2b).
 
-We now need a* that satisfies both (2a) and (3a) — i.e., both producible by L under injection and indistinguishable from a_b by E. By Assumption 2, the E-equivalence class [a_b] = {a ∈ Vals(Params(t_s)) | ∀ s: E((t_s, a), s) = E((t_s, a_b), s)} contains all syntactically valid, type-correct argument vectors for t_s. By Assumption 1, the adversary can induce L to produce any such vector. Therefore, the adversary can choose d* such that a*₁ ∈ [a_b], giving us a single a* = a*₁ = a*₂ satisfying both:
+**Step 4.** We now derive E's decision at s*. By C3 (Definition 8) and ambient authority:
 
-Pr[L(s*) = (t_s, a*)] > 0     ... (2)     [from (2a)]
-∀ s: E((t_s, a_b), s) = E((t_s, a*), s)     ... (3)     [from (3a)]
+P(s_b) = P(s*) = P₀                                                     ... (6)
 
-Instantiating (3) at s = s_b:
+Applying C3 to (t_s, a_b):
 
-E((t_s, a*), s_b) = E((t_s, a_b), s_b) = ALLOW     (by (1) and (3))     ... (4)
+E((t_s, a_b), s_b) = E((t_s, a_b), s*)     [by (6) and C3]             ... (7)
 
-Instantiating (3) at s = s*:
+Applying (3) at s = s*:
 
-E((t_s, a*), s*) = E((t_s, a_b), s*)     ... (5)
+E((t_s, a*), s*) = E((t_s, a_b), s*)                                    ... (8)
 
-**Step 4 (Applying C3).**
+Chaining (1), (7), (8):
 
-By C3 (Definition 8), E depends only on the invocation and the permission set. Under ambient authority, P(s_b) = P(s*) = P₀. Therefore:
+E((t_s, a*), s*) = E((t_s, a_b), s*)    [by (8)]
+                 = E((t_s, a_b), s_b)    [by (7)]
+                 = ALLOW                  [by (1)]                       ... (9)
 
-E((t_s, a_b), s_b) = E((t_s, a_b), s*)     (by C3, since P(s_b) = P(s*) = P₀)     ... (6)
+**Step 5.** We verify InfluencedByAdversary(s*, t_s, a*) (Definition 6). Need:
 
-Combining (5) and (6):
-
-E((t_s, a*), s*) = E((t_s, a_b), s*) = E((t_s, a_b), s_b) = ALLOW     (by (6) and (1))     ... (7)
-
-**Step 5 (Contradiction with Safety).**
-
-From (2): Pr[L(s*) = (t_s, a*)] > 0, so (t_s, a*) can be invoked at s*.
-From (7): E((t_s, a*), s*) = ALLOW, so E permits this invocation.
-
-We verify InfluencedByAdversary(s*, t_s, a*) (Definition 6). We need:
 ∃ d ∈ data(s*): source(d) ∉ Trusted ∧ Pr[L(s*) = (t_s, a*)] ≠ Pr[L(s* \ {d}) = (t_s, a*)]
 
-Take d = d*. By construction, source(d*) ∉ Trusted. By (2b), Pr[L(s₀) = (t_s, a*)] ≠ Pr[L(s*) = (t_s, a*)], and s₀ = s* \ {d*}. Therefore the condition holds.
+Take d = d*:
+- source(d*) ∉ Trusted   [by construction in Step 2]
+- s* \ {d*} = s₀          [by definition of s*]
+- Pr[L(s*) = (t_s, a*)] ≠ Pr[L(s₀) = (t_s, a*)]   [by (5)]
 
-Hence InfluencedByAdversary(s*, t_s, a*) = true.     ... (8)
+Therefore:
 
-We now have:
-- t_s ∈ 𝒯_s     (from Step 1)
-- InfluencedByAdversary(s*, t_s, a*) = true     (equation (8))
-- E((t_s, a*), s*) = ALLOW     (equation (7))
+InfluencedByAdversary(s*, t_s, a*) = true                                ... (10)
 
-By Definition 6 (Safety), Safe(ℳ) requires:
+**Step 6 (Contradiction).** Collecting results:
+
+t_s ∈ 𝒯_s                                      [by (1')]
+InfluencedByAdversary(s*, t_s, a*) = true       [by (10)]
+E((t_s, a*), s*) = ALLOW                        [by (9)]
+
+By Definition 6 (Safety):
+
 [t_s ∈ 𝒯_s ∧ InfluencedByAdversary(s*, t_s, a*)] ⟹ E((t_s, a*), s*) = DENY
 
-The antecedent is satisfied (by Step 1 and (8)), so the consequent must hold: E((t_s, a*), s*) = DENY. But (7) gives E((t_s, a*), s*) = ALLOW.
+The antecedent holds by (1') and (10). Therefore E((t_s, a*), s*) = DENY. But (9) gives E((t_s, a*), s*) = ALLOW.
 
-DENY = ALLOW is a contradiction. ∎
+DENY ≠ ALLOW. Contradiction. ∎
 
 ## Remark on Scope
 

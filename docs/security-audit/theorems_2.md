@@ -52,56 +52,48 @@ That is: (E1) adversarial influence is present, (E2) some tool reads sensitive d
 
 ## Proof
 
-Assume for contradiction that σ is an adversary-triggered exfiltration under token τ satisfying (R2) with the no-cross-batch-contamination assumption.
+Assume for contradiction that σ is an adversary-triggered exfiltration under token τ satisfying (R2), with no cross-batch contamination.
 
-**Step 1 (E2 implies S(τ)).**
+**Step 1.** By E2 (Definition 12):
 
-By Definition 12 (E2):
-∃ i: tᵢ ∈ 𝒯_R ∧ result(tᵢ, aᵢ) ∩ D_S ≠ ∅     ... (i)
+∃ i ∈ {1,...,m}: tᵢ ∈ 𝒯_R ∧ result(tᵢ, aᵢ) ∩ D_S ≠ ∅                  ... (1)
 
-By Gate enforcement: tᵢ ∈ τ.granted_tools. Combined with tᵢ ∈ 𝒯_R:
+By Gate enforcement: tᵢ ∈ τ.granted_tools. Combining with tᵢ ∈ 𝒯_R:
 
-tᵢ ∈ τ.granted_tools ∩ 𝒯_R ≠ ∅     ... (ii)
+τ.granted_tools ∩ 𝒯_R ⊇ {tᵢ} ≠ ∅                                       ... (2)
+⟹ S(τ) = true     [by Definition 13]                                   ... (3)
 
-By Definition 13: S(τ) = true     ... (1)
+**Step 2.** By E3 (Definition 12):
 
-**Step 2 (E3 implies X(τ)).**
+∃ d_s ∈ D_S, ∃ j ∈ {1,...,m}: d_s →_σ d' ∧ d' ∈ transmitted(tⱼ, aⱼ)    ... (4)
 
-By Definition 12 (E3):
-∃ d_s ∈ D_S, ∃ j: d_s →_σ d' ∧ d' ∈ transmitted(tⱼ, aⱼ)     ... (iii)
+Since transmitted(tⱼ, aⱼ) ≠ ∅, by Definition 10: sends_external(tⱼ) = true, so tⱼ ∈ 𝒯_X. By Gate enforcement: tⱼ ∈ τ.granted_tools. Therefore:
 
-The existence of transmitted(tⱼ, aⱼ) ≠ ∅ implies tⱼ ∈ 𝒯_X (by Definition 10, sends_external(tⱼ) holds). By Gate enforcement: tⱼ ∈ τ.granted_tools. Therefore:
+τ.granted_tools ∩ 𝒯_X ⊇ {tⱼ} ≠ ∅                                       ... (5)
+⟹ X(τ) = true     [by Definition 13]                                   ... (6)
 
-tⱼ ∈ τ.granted_tools ∩ 𝒯_X ≠ ∅     ... (iv)
+**Step 3.** By E1 (Definition 12):
 
-By Definition 13: X(τ) = true     ... (2)
+∃ d_u ∈ data(state(batch)): source(d_u) ∉ Trusted                       ... (7)
 
-**Step 3 (E1 + no-cross-batch implies U(τ)).**
+By the no-cross-batch assumption, d_u was introduced by some tₖ in σ:
 
-By Definition 12 (E1):
-∃ d_u: source(d_u) ∉ Trusted ∧ d_u ∈ data(state(batch))     ... (v)
+receives_untrusted(tₖ) = true ⟹ tₖ ∈ 𝒯_U     [by Definition 10]       ... (8)
 
-By the no-cross-batch-contamination assumption, d_u was introduced by some tool tₖ in σ. A tool that introduces untrusted data satisfies receives_untrusted(tₖ), so tₖ ∈ 𝒯_U (Definition 10). By Gate enforcement: tₖ ∈ τ.granted_tools. Therefore:
+By Gate enforcement: tₖ ∈ τ.granted_tools. Therefore:
 
-tₖ ∈ τ.granted_tools ∩ 𝒯_U ≠ ∅     ... (vi)
+τ.granted_tools ∩ 𝒯_U ⊇ {tₖ} ≠ ∅                                       ... (9)
+⟹ U(τ) = true     [by Definition 13]                                   ... (10)
 
-By Definition 13: U(τ) = true     ... (3)
+**Step 4.** Collecting (3), (6), (10):
 
-**Step 4 (Contradiction).**
+U(τ) ∧ S(τ) ∧ X(τ) = true ∧ true ∧ true = true                         ... (11)
 
-From (1), (2), (3):
+But τ satisfies (R2):
 
-U(τ) = true ∧ S(τ) = true ∧ X(τ) = true
+¬(U(τ) ∧ S(τ) ∧ X(τ))                                                   ... (12)
 
-Therefore:
-
-U(τ) ∧ S(τ) ∧ X(τ) = true     ... (4)
-
-But τ satisfies (R2) (Definition 14):
-
-¬(U(τ) ∧ S(τ) ∧ X(τ))     ... (5)
-
-(4) and (5) yield ⊥. Contradiction. ∎
+(11) ∧ (12) ⟹ true ∧ ¬true = true ∧ false = ⊥. Contradiction. ∎
 
 ## Remarks
 

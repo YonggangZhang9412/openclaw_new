@@ -26,37 +26,18 @@ Under event-scoped authority, the session is partitioned into B event batches wi
 
 Ξ_capability / Ξ_ambient ≤ (k / |P₀|) · (B · TTL_max / T_session)     ... (ratio)
 
-**Proof.**
-
-Starting from (Ξ-def) applied to the event-scoped model. The session has N = 2B − 1 intervals (B batch intervals + B − 1 gap intervals). For gap intervals, P(s) = ∅, so |P(s)| = 0 and those terms vanish:
+**Proof.** The session has B batch intervals and B − 1 gap intervals. For gaps, |∅| = 0. Therefore:
 
 Ξ_capability = Σᵢ₌₁ᴮ |P_bᵢ| · Δᵢ + Σⱼ₌₁ᴮ⁻¹ |∅| · Δgapⱼ
-             = Σᵢ₌₁ᴮ |P_bᵢ| · Δᵢ + 0
-             = Σᵢ₌₁ᴮ |P_bᵢ| · Δᵢ     ... (i)
+             = Σᵢ₌₁ᴮ |P_bᵢ| · Δᵢ                              [gap terms vanish]
+             ≤ Σᵢ₌₁ᴮ k · Δᵢ                                    [since |P_bᵢ| ≤ k]
+             ≤ Σᵢ₌₁ᴮ k · TTL_max                               [since Δᵢ ≤ TTL_max]
+             = B · k · TTL_max                                    ... (bound)
 
-By assumption, |P_bᵢ| ≤ k for all i. Therefore:
+Dividing by Ξ_ambient = |P₀| · T_session (from (amb)):
 
-|P_bᵢ| · Δᵢ ≤ k · Δᵢ     for each i     ... (ii)
-
-By assumption, Δᵢ ≤ TTL_max for all i. Therefore:
-
-k · Δᵢ ≤ k · TTL_max     for each i     ... (iii)
-
-Summing (iii) over i = 1, ..., B:
-
-Σᵢ₌₁ᴮ |P_bᵢ| · Δᵢ ≤ Σᵢ₌₁ᴮ k · TTL_max = B · k · TTL_max     ... (iv)
-
-Combining (i) and (iv):
-
-Ξ_capability ≤ B · k · TTL_max     ... (bound)
-
-Dividing (bound) by (amb):
-
-Ξ_capability / Ξ_ambient ≤ (B · k · TTL_max) / (|P₀| · T_session)     ... (v)
-
-Factoring:
-
-= (k / |P₀|) · (B · TTL_max / T_session)     ... (ratio) ∎
+Ξ_capability / Ξ_ambient ≤ (B · k · TTL_max) / (|P₀| · T_session)
+                         = (k / |P₀|) · (B · TTL_max / T_session)   ... (ratio)  ∎
 
 ## Concrete Instantiation
 
