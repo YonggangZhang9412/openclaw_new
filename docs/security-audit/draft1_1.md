@@ -1,6 +1,6 @@
-# The Agent Authority Problem
+# The Agent Authority Problem: Why Autonomous AI Demands Deterministic Security
 
-**Structural Impossibility of Secure Autonomous AI Under Ambient Authority, and an Event-Driven Capability Architecture as Solution**
+**Event-driven capability architecture as a structural resolution to the impossibility of securing LLM agents under ambient authority**
 
 *Draft 1 — April 2026*
 
