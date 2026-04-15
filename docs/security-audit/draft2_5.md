@@ -49,22 +49,64 @@ The structural argument (Section 2.3) and the Rule of Two's scope are presented 
 
 ---
 
+## Methods
+
+### Event model and EventBus
+
+All system triggers are normalized into a typed Event — a frozen (immutable) dataclass with fields: `id` (12-character hex UUID), `source` (originating module: timer, cron, file, process, network, custom, etc.), `type` (event class, e.g. `channel.message_received`, `file.modified`), `priority` (CRITICAL > HIGH > NORMAL > LOW), `payload` (event-specific dictionary), `origin_chain` (immutable tuple tracing provenance across event re-emissions), and `cascade_depth` (integer, automatically incremented by the framework when a consumer injects a child event; hard limit: 20).
+
+The EventBus receives events through registered EventSources, applies an EventInjectionGate (per-source policy enforcement: event type whitelist, rate limiting via sliding 1-second window, payload size cap, cascade depth check, CRITICAL priority requires an unforgeable EscalationToken), then routes through an EventFilter (debounce with 0.5s window, priority-based routing) into a priority queue (max capacity: 10,000; overflow: lowest-priority eviction). The EventConsumer dequeues event batches (2-second collection window, max 20 events) for processing.
+
+### CapabilityIssuer: event-to-token mapping
+
+For each event batch, the CapabilityIssuer performs:
+
+1. **Trust classification.** `classify_event_trust(events)` inspects each event's `source` and `origin_chain`. Events from internal modules (timer, cron, file, process, network — 10 trusted sources total) are classified LOCAL_TRUSTED. Events from authenticated remote devices are REMOTE_VERIFIED. Events from custom/unknown sources without internal module markers in their origin_chain are REMOTE_OPEN.
+
+2. **Tool grant selection.** A static mapping `EVENT_TOOL_GRANTS` maps event types to minimal tool sets (e.g., `timer.heartbeat_due` → {read_file, list_directory, memory_search}; `cron.job_due` → adds write_file, execute_code, bash). For REMOTE_OPEN events, high-risk tools (bash, run_command, daemon_restart, send_email, curl, wget) are removed from the grant regardless of event type.
+
+3. **Path inference.** If the event payload contains a `path` field, the issuer resolves it to an absolute path and grants access to its parent directory via glob pattern.
+
+4. **Rule-of-Two flag evaluation.** The issuer examines whether the granted tool set contains untrusted-input tools (web_fetch, web_search), sensitive-data tools (read_file with sensitive path patterns), and external-action tools (send_email, curl, bash). If all three categories are present, the external-action tools are removed.
+
+5. **Token construction.** A frozen CapabilityToken is created with: `granted_tools` (frozenset), `denied_tools` (frozenset, priority over grants), `granted_paths` (tuple of glob patterns), `ttl` (300 seconds), and Rule-of-Two flags.
+
+### CapabilityGate: three-check verification
+
+For each tool call `(tool_name, tool_args)` proposed by the LLM:
+
+**Check 1 (Token).** Verify: (a) token TTL has not expired (timestamp comparison); (b) `tool_name ∈ granted_tools`; (c) `tool_name ∉ denied_tools`. If any fails → DENY.
+
+**Check 2 (Taint).** For each string value in `tool_args`: (a) query TaintStore by computing SHA-256 of the normalized value and checking against registered fingerprints; (b) if no fingerprint match, check for registered high-taint substrings (emails, URLs, paths extracted during registration); (c) if no substring match, check for boundary markers (`<<<EXTERNAL_UNTRUSTED_CONTENT id="...">>>`). If the returned taint level exceeds the tool's policy for that parameter (defined in `DEFAULT_TOOL_POLICIES`, e.g., `send_email.to` requires taint ≤ USER) → DENY.
+
+**Check 3 (Structural).** Verify: (a) if the tool requires path checking, the path argument matches at least one `granted_paths` glob; (b) the tool's call count in this round does not exceed `max_calls_per_round` (default: 20); (c) the CausalRuleOfTwo constraint is not violated for this batch.
+
+### TaintStore registration and query
+
+On tool execution, the return value is registered: `TaintStore.register(content, taint_level, origin_tool)`. Registration computes a SHA-256 fingerprint of the normalized content (first 16 hex characters), extracts substrings matching email/URL/path patterns for content >5KB, and stores the record with a TTL of 600 seconds. Maximum capacity: 10,000 records with LRU eviction. Query follows a short-circuit strategy: boundary markers → fingerprint match → substring match → None (unknown, fail-open).
+
+### Code and data availability
+
+The architecture is implemented in Python as part of the ShadowClaw project. Source code is available at [repository URL]. The tool enumeration (55 tools across 16 module categories) is provided in Supplementary Table 1.
+
+---
+
 ## 8. Conclusion and Outlook
 
-The Agent Authority Problem reveals that the security crisis facing autonomous AI agents is a matter of paradigmatic misfit: the ambient authority model cannot secure systems whose intent emerges from — and can be corrupted by — the data they process. This is a permanent property rooted in natural language's inherent data-instruction ambiguity, not a temporary limitation future models will overcome.
+The Agent Authority Problem reveals that the security crisis facing autonomous AI agents is a matter of paradigmatic misfit: the ambient authority model cannot secure systems whose intent emerges from — and can be corrupted by — the data they process. This property holds for any architecture where data and instructions share a processing channel, which includes all current and foreseeable LLM-based agent systems.
 
-Our event-driven capability architecture demonstrates that this problem can be dissolved by ensuring security enforcement operates through a channel fundamentally different from the one exposed to adversarial data. The principle of **heterogeneous security enforcement** — that the safety layer and the protected system must not share an attack surface — is the central insight.
+Our event-driven capability architecture demonstrates that this problem can be circumvented — not by making LLMs more robust within the ambient authority model, but by replacing that model with one in which security enforcement operates through a fundamentally different channel than the one exposed to adversarial data. The principle of **heterogeneous security enforcement** — that the safety layer and the protected system must not share an attack surface — is the central insight.
 
 Three challenges remain at the frontier. The cross-batch contamination gap demands a principled framework for session-level taint management. The semantic attack boundary marks the interface between structural security and behavioral safety. And formal verification of the architecture's invariants, while tractable, awaits rigorous treatment.
 
-The SQL injection parallel is both warning and hope. It took the database community 15 years to transition from sanitization to parameterized queries. The agent security community cannot afford that timeline. The systems deployed today — with access to email, financial accounts, and medical records — create immediate risk. The transition from ambient authority to deterministic, event-driven capability security is not one option among many. For any domain where autonomous agents perform consequential actions, it is the minimum viable security architecture.
+The SQL injection parallel is both warning and hope. It took the database community 15 years to transition from sanitization to parameterized queries. The agent security community cannot afford that timeline. We argue that the class of architectures providing event provenance, cascade enforcement, batch atomicity, and deterministic gating — of which our EventBus-CapabilityGate system is one concrete instance — represents a necessary direction for any domain where autonomous agents perform consequential actions. Alternative architectures achieving equivalent structural properties (such as CaMeL's Privileged/Quarantined separation¹²) may emerge; the critical requirement is not any specific implementation, but the abandonment of ambient authority as the organizing principle for agent security.
 
 ---
 
 ## References
 
 1. Gabriel, I. et al. We need a new ethics for a world of AI agents. *Nature* **644**, 291–294 (2025).
-2. OpenClaw Project. Security advisories and incident reports. GitHub (2026). https://github.com/openclaw
+2. OpenClaw Project. Security advisories GHSA-2026-25253 (RCE), GHSA-2026-25254, GHSA-2026-25255 (command injection). GitHub (2026).
 3. Sangfor Technologies. OpenClaw Security Risks: From Vulnerabilities to Supply Chain Abuse. Security Research (2026).
 4. Censys. Exposed OpenClaw Instances Analysis. (2026).
 5. KuCoin Research. AI Trading Agent Vulnerability: $45M Crypto Security Breach. (2026).
@@ -93,3 +135,4 @@ The SQL injection parallel is both warning and hope. It took the database commun
 28. Nature Communications. Risks of AI scientists: prioritizing safeguarding over autonomy. *Nat. Commun.* (2025).
 29. Cisco Security. Personal AI Agents like OpenClaw Are a Security Nightmare. Cisco Blogs (2026).
 30. Qualys. Anatomy of an Autonomous AI Agent Risk: Qualys ETM on OpenClaw. (2026).
+31. MarketsandMarkets. AI Agents Market Size, Share & Industry Trends Analysis Report. (2025).
