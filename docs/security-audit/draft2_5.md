@@ -49,6 +49,18 @@ The structural argument (Section 2.3) and the Rule of Two's scope are presented 
 
 ---
 
+## 8. Conclusion and Outlook
+
+The Agent Authority Problem reveals that the security crisis facing autonomous AI agents is a matter of paradigmatic misfit: the ambient authority model cannot secure systems whose intent emerges from — and can be corrupted by — the data they process. This property holds for any architecture where data and instructions share a processing channel, which includes all current and foreseeable LLM-based agent systems.
+
+Our event-driven capability architecture demonstrates that this problem can be circumvented — not by making LLMs more robust within the ambient authority model, but by replacing that model with one in which security enforcement operates through a fundamentally different channel than the one exposed to adversarial data. The principle of **heterogeneous security enforcement** — that the safety layer and the protected system must not share an attack surface — is the central insight.
+
+Three challenges remain at the frontier. The cross-batch contamination gap demands a principled framework for session-level taint management. The semantic attack boundary marks the interface between structural security and behavioral safety. And formal verification of the architecture's invariants, while tractable, awaits rigorous treatment.
+
+The SQL injection parallel is both warning and hope. It took the database community 15 years to transition from sanitization to parameterized queries. The agent security community cannot afford that timeline. We argue that the class of architectures providing event provenance, cascade enforcement, batch atomicity, and deterministic gating — of which our EventBus-CapabilityGate system is one concrete instance — represents a necessary direction for any domain where autonomous agents perform consequential actions. Alternative architectures achieving equivalent structural properties (such as CaMeL's Privileged/Quarantined separation¹²) may emerge; the critical requirement is not any specific implementation, but the abandonment of ambient authority as the organizing principle for agent security.
+
+---
+
 ## Methods
 
 ### Event model and EventBus
@@ -61,7 +73,7 @@ The EventBus receives events through registered EventSources, applies an EventIn
 
 For each event batch, the CapabilityIssuer performs:
 
-1. **Trust classification.** `classify_event_trust(events)` inspects each event's `source` and `origin_chain`. Events from internal modules (timer, cron, file, process, network — 10 trusted sources total) are classified LOCAL_TRUSTED. Events from authenticated remote devices are REMOTE_VERIFIED. Events from custom/unknown sources without internal module markers in their origin_chain are REMOTE_OPEN.
+1. **Trust classification.** `classify_event_trust(events)` inspects each event's `source` and `origin_chain`. Events from the 10 internal modules (timer, cron, file, process, network, node, discovery, contract, task, skill_source) are classified LOCAL_TRUSTED. Events from authenticated remote devices are REMOTE_VERIFIED. Events from custom/unknown sources without internal module markers in their origin_chain are REMOTE_OPEN.
 
 2. **Tool grant selection.** A static mapping `EVENT_TOOL_GRANTS` maps event types to minimal tool sets (e.g., `timer.heartbeat_due` → {read_file, list_directory, memory_search}; `cron.job_due` → adds write_file, execute_code, bash). For REMOTE_OPEN events, high-risk tools (bash, run_command, daemon_restart, send_email, curl, wget) are removed from the grant regardless of event type.
 
@@ -91,48 +103,36 @@ The architecture is implemented in Python as part of the ShadowClaw project. Sou
 
 ---
 
-## 8. Conclusion and Outlook
-
-The Agent Authority Problem reveals that the security crisis facing autonomous AI agents is a matter of paradigmatic misfit: the ambient authority model cannot secure systems whose intent emerges from — and can be corrupted by — the data they process. This property holds for any architecture where data and instructions share a processing channel, which includes all current and foreseeable LLM-based agent systems.
-
-Our event-driven capability architecture demonstrates that this problem can be circumvented — not by making LLMs more robust within the ambient authority model, but by replacing that model with one in which security enforcement operates through a fundamentally different channel than the one exposed to adversarial data. The principle of **heterogeneous security enforcement** — that the safety layer and the protected system must not share an attack surface — is the central insight.
-
-Three challenges remain at the frontier. The cross-batch contamination gap demands a principled framework for session-level taint management. The semantic attack boundary marks the interface between structural security and behavioral safety. And formal verification of the architecture's invariants, while tractable, awaits rigorous treatment.
-
-The SQL injection parallel is both warning and hope. It took the database community 15 years to transition from sanitization to parameterized queries. The agent security community cannot afford that timeline. We argue that the class of architectures providing event provenance, cascade enforcement, batch atomicity, and deterministic gating — of which our EventBus-CapabilityGate system is one concrete instance — represents a necessary direction for any domain where autonomous agents perform consequential actions. Alternative architectures achieving equivalent structural properties (such as CaMeL's Privileged/Quarantined separation¹²) may emerge; the critical requirement is not any specific implementation, but the abandonment of ambient authority as the organizing principle for agent security.
-
----
-
 ## References
 
 1. Gabriel, I. et al. We need a new ethics for a world of AI agents. *Nature* **644**, 291–294 (2025).
-2. OpenClaw Project. Security advisories GHSA-2026-25253 (RCE), GHSA-2026-25254, GHSA-2026-25255 (command injection). GitHub (2026).
-3. Sangfor Technologies. OpenClaw Security Risks: From Vulnerabilities to Supply Chain Abuse. Security Research (2026).
-4. Censys. Exposed OpenClaw Instances Analysis. (2026).
-5. KuCoin Research. AI Trading Agent Vulnerability: $45M Crypto Security Breach. (2026).
-6. OWASP. Top 10 for Large Language Model Applications v2.0. (2025).
-7. Nature Editorial. Let 2026 be the year the world comes together for AI safety. *Nature* (2025).
-8. Nature Machine Intelligence Editorial. Multi-agent AI systems need transparency. *Nat. Mach. Intell.* (2026).
-9. CVE-2026-25253. OpenClaw Remote Code Execution via Cross-Site WebSocket Hijacking. CVSS 8.8.
-10. CVE-2025-32711 (EchoLeak). Microsoft Copilot Sensitive Data Exfiltration via Email Prompt Injection.
+2. OpenClaw Project. Security advisories GHSA-2026-25253 (RCE), GHSA-2026-25254, GHSA-2026-25255 (command injection). GitHub https://github.com/openclaw/openclaw/security/advisories (2026).
+3. Sangfor Technologies. OpenClaw Security Risks: From Vulnerabilities to Supply Chain Abuse. Report at https://www.sangfor.com/blog/cybersecurity/openclaw-ai-agent-security-risks-2026 (accessed 10 April 2026).
+4. Censys. Exposed OpenClaw Instances Analysis. Report at https://censys.io/openclaw-exposed-instances (accessed 10 April 2026).
+5. KuCoin Research. AI Trading Agent Vulnerability: $45M Crypto Security Breach. Report at https://www.kucoin.com/blog (accessed 10 April 2026).
+6. OWASP. Top 10 for Large Language Model Applications v2.0. https://owasp.org/www-project-top-10-for-large-language-model-applications/ (2025).
+7. Nature Editorial. Let 2026 be the year the world comes together for AI safety. *Nature* **637**, 8–9 (2025).
+8. Nature Machine Intelligence Editorial. Multi-agent AI systems need transparency. *Nat. Mach. Intell.* **8**, 1–2 (2026).
+9. MITRE. CVE-2026-25253: OpenClaw Remote Code Execution via Cross-Site WebSocket Hijacking. CVSS 8.8. https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2026-25253 (2026).
+10. MITRE. CVE-2025-32711 (EchoLeak): Microsoft Copilot Sensitive Data Exfiltration via Email Prompt Injection. https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2025-32711 (2025).
 11. Dennis, J. B. & Van Horn, E. C. Programming semantics for multiprogrammed computations. *Commun. ACM* **9**, 143–155 (1966).
-12. Debenedetti, E. et al. Defeating Prompt Injections by Design. *arXiv:2503.18813* (2025).
-13. Greshake, K. et al. Not what you've signed up for: Compromising Real-World LLM-Integrated Applications with Indirect Prompt Injection. *AISec '23*, 79–90 (2023).
-14. Xiao, A. et al. Agentic AI Security: Threats, Defenses, Evaluation, and Open Challenges. *arXiv:2510.23883* (2025).
-15. Zhan, Q. et al. InjecAgent: Benchmarking Indirect Prompt Injections in Tool-Integrated LLM Agents. *ACL 2024 Findings* (2024).
-16. Yi, J. et al. Benchmarking and Defending Against Indirect Prompt Injection Attacks on Large Language Models. *arXiv:2312.14197* (2023).
-17. Partnership on AI. AI Incident Database. https://incidentdatabase.ai (2024-2026).
-18. Wallace, E. et al. The Instruction Hierarchy: Training LLMs to Prioritize Privileged Instructions. *arXiv:2404.13208* (2024).
-19. EU Parliament. Regulation (EU) 2024/1689 (AI Act). *Official Journal of the European Union* (2024).
-20. Birgisson, A. et al. Macaroons: Cookies with Contextual Caveats for Decentralized Authorization in the Cloud. *NDSS* (2014).
-21. FINOS. Agent Authority Least Privilege Framework. https://air-governance-framework.finos.org (2025).
-22. Suh, G. E. et al. Secure Program Execution via Dynamic Information Flow Tracking. *ASPLOS* (2004).
-23. Ouyang, L. et al. Training language models to follow instructions with human feedback. *NeurIPS* (2022).
-24. Bai, Y. et al. Constitutional AI: Harmlessness from AI Feedback. *arXiv:2212.08073* (2022).
+12. Debenedetti, E. et al. Defeating Prompt Injections by Design. Preprint at https://arxiv.org/abs/2503.18813 (2025).
+13. Greshake, K. et al. Not what you've signed up for: Compromising Real-World LLM-Integrated Applications with Indirect Prompt Injection. *Proc. AISec '23*, 79–90 (2023).
+14. Xiao, A. et al. Agentic AI Security: Threats, Defenses, Evaluation, and Open Challenges. Preprint at https://arxiv.org/abs/2510.23883 (2025).
+15. Zhan, Q. et al. InjecAgent: Benchmarking Indirect Prompt Injections in Tool-Integrated LLM Agents. *Findings of ACL 2024* (2024).
+16. Yi, J. et al. Benchmarking and Defending Against Indirect Prompt Injection Attacks on Large Language Models. Preprint at https://arxiv.org/abs/2312.14197 (2023).
+17. Partnership on AI. AI Incident Database. https://incidentdatabase.ai (accessed 10 April 2026).
+18. Wallace, E. et al. The Instruction Hierarchy: Training LLMs to Prioritize Privileged Instructions. Preprint at https://arxiv.org/abs/2404.13208 (2024).
+19. EU Parliament. Regulation (EU) 2024/1689 laying down harmonised rules on artificial intelligence (AI Act). *Official Journal of the European Union* L 2024/1689 (2024).
+20. Birgisson, A. et al. Macaroons: Cookies with Contextual Caveats for Decentralized Authorization in the Cloud. *Proc. NDSS* (2014).
+21. FINOS. Agent Authority Least Privilege Framework. https://air-governance-framework.finos.org (accessed 10 April 2026).
+22. Suh, G. E. et al. Secure Program Execution via Dynamic Information Flow Tracking. *Proc. ASPLOS* (2004).
+23. Ouyang, L. et al. Training language models to follow instructions with human feedback. *Proc. NeurIPS* **35**, 27730–27744 (2022).
+24. Bai, Y. et al. Constitutional AI: Harmlessness from AI Feedback. Preprint at https://arxiv.org/abs/2212.08073 (2022).
 25. European Commission. EU AI Act Articles 9, 12, 14, 15. Regulation (EU) 2024/1689 (2024).
-26. US Executive Order 14110. Safe, Secure, and Trustworthy Development and Use of Artificial Intelligence. (2023).
+26. The White House. Executive Order 14110: Safe, Secure, and Trustworthy Development and Use of Artificial Intelligence. *Federal Register* **88**, 75191 (2023).
 27. China Cyberspace Administration. Interim Measures for the Management of Generative AI Services. (2023).
-28. Nature Communications. Risks of AI scientists: prioritizing safeguarding over autonomy. *Nat. Commun.* (2025).
-29. Cisco Security. Personal AI Agents like OpenClaw Are a Security Nightmare. Cisco Blogs (2026).
-30. Qualys. Anatomy of an Autonomous AI Agent Risk: Qualys ETM on OpenClaw. (2026).
-31. MarketsandMarkets. AI Agents Market Size, Share & Industry Trends Analysis Report. (2025).
+28. Berditchevskaia, A. et al. Risks of AI scientists: prioritizing safeguarding over autonomy. *Nat. Commun.* **16**, 5003 (2025).
+29. Cisco Security. Personal AI Agents like OpenClaw Are a Security Nightmare. Report at https://blogs.cisco.com/ai/personal-ai-agents-like-openclaw-are-a-security-nightmare (accessed 10 April 2026).
+30. Qualys. Anatomy of an Autonomous AI Agent Risk: Qualys ETM on OpenClaw. Report at https://blog.qualys.com/product-tech/2026/04/13/anatomy-autonomous-ai-agent-risk-qualys-etm-openclaw (accessed 10 April 2026).
+31. MarketsandMarkets. AI Agents Market Size, Share & Industry Trends Analysis Report. Report at https://www.marketsandmarkets.com (accessed 10 April 2026).
