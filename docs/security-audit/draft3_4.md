@@ -10,7 +10,7 @@ We consider an adversary who can embed adversarial instructions in data sources 
 
 Pr[Exfil(b)] ≤ p · min(kn_R/n, kn_X/n) · (1 - R₂) · q
 
-where each factor corresponds to an independent architectural barrier: p (injection success), kn_R/n and kn_X/n (tool visibility — union bounds on the probability of sensitive-read and external-send tools in token), R₂ (Rule of Two: zeroes the bound when enforced), q (cross-batch taint evasion). Full proof in Supplementary Notes, Section 2.
+where each factor corresponds to a distinct architectural barrier that the attacker must overcome: p (injection success), kn_R/n and kn_X/n (tool visibility — union bounds on the probability of sensitive-read and external-send tools being granted in the token; these arise from the same token draw and are not probabilistically independent, but represent architecturally distinct constraints), R₂ (Rule of Two: zeroes the bound when enforced), q (cross-batch taint evasion). Full proof in Supplementary Notes, Section 2.
 
 **Theorem 2 (Session-Level Bound).** Over B batches: Pr[∃b: Exfil(b)] ≤ 1 - (1-ε)^B where ε is the per-batch bound. Under ambient authority: Pr[∃b: Exfil(b)] ≥ 1-(1-p)^B → 1 as B → ∞.
 

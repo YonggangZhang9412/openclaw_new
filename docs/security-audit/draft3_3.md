@@ -16,7 +16,12 @@ Under event-scoped capability authority, all three conditions are simultaneously
 
 These principles impose requirements on the underlying architecture that necessitate both an event-driven model and a **dual-gate security structure** (Fig. 2).
 
-**EventBus.** All triggers — user messages, timers, file changes, cron jobs, network events — are normalized into typed Event objects (frozen dataclasses with immutable `source`, `origin_chain`, `cascade_depth`). This provides unforgeable event provenance (Requirement A), framework-enforced cascade depth (Requirement B), and batch-atomic security decisions (Requirement C).
+**EventBus.** All triggers — user messages, timers, file changes, cron jobs, network events — are normalized into typed Event objects (frozen dataclasses with immutable `source`, `origin_chain`, `cascade_depth`). This unified event model provides four structural properties unachievable in request-response architectures:
+
+- **Requirement A (Event provenance).** Each event carries immutable metadata identifying its origin and trust level, set by the framework — not by the caller. A request-response model can authenticate *caller identity* (via JWT, mTLS) but cannot represent *event provenance* — what kind of trigger initiated the processing context.
+- **Requirement B (Cascade depth enforcement).** The framework auto-increments `cascade_depth` when consumers inject child events; a hard limit of 20 prevents infinite loops. In request-response models, this requires manual propagation by each handler — a single non-compliant handler breaks the guarantee.
+- **Requirement C (Batch atomicity).** Correlated events are processed as atomic batches, enabling the Rule of Two (Section 3.4) to evaluate across the entire batch. Per-request security decisions would fragment the analysis window.
+- **Requirement D (Composable monitoring).** 18 independent side consumers — security scanning, capability gate auditing, error aggregation, delivery monitoring — subscribe to the event stream in parallel without mutual coupling.
 
 **Gate 1: EventInjectionGate (producer-side).** Before an event enters the EventBus, the EventInjectionGate enforces per-source security policies:
 - **Rate limiting**: sliding 1-second window per source (ADMIN: 200/s, CLI: 100/s, MOBILE: 10/s)
@@ -43,9 +48,9 @@ The CapabilityIssuer classifies each event batch into one of three trust levels 
 | REMOTE_VERIFIED | Authenticated device via HMAC challenge-response | High-risk tools removed (bash, daemon_restart) | α_R, α_X reduced; tighter bound |
 | REMOTE_OPEN | Unverified external source (custom webhook, unauthenticated WS) | All external-action tools removed (bash, curl, wget, send_email, run_command) | α_X = 0 → Pr[Exfil] = 0 |
 
-**Corollary (Trust-Level Zero Guarantee).** For REMOTE_OPEN events, no external-action tool is granted (α_X = 0). By Theorem 1: Pr[Exfil | REMOTE_OPEN] ≤ p · min(α_R, 0) · (1-R₂) · q = 0. Exfiltration through untrusted event sources is structurally impossible — independent of injection success rate, Rule of Two, or taint tracking.
+**Corollary (Trust-Level Zero Guarantee).** For REMOTE_OPEN events, no external-action tool is granted (α_X = 0). Since exfiltration requires transmitting data externally, and no external-send tool is available, exfiltration is structurally impossible regardless of injection success rate, Rule of Two status, or taint evasion capability. As we formalize in Theorem 1 (Section 4): Pr[Exfil | REMOTE_OPEN] ≤ p · min(α_R, 0) · (1-R₂) · q = 0.
 
-This is strictly stronger than the Rule of Two guarantee (Theorem 3), which requires R₂ = 1. The trust-level guarantee holds regardless of R₂.
+This guarantee is strictly stronger than the Rule of Two (Theorem 3, Section 4), which requires R₂ = 1 and applies only within a single batch. The trust-level guarantee holds regardless of R₂ and regardless of cross-batch contamination.
 
 ### 3.4 Three-layer CapabilityGate
 
@@ -55,7 +60,7 @@ This is strictly stronger than the Rule of Two guarantee (Theorem 3), which requ
 
 Taint tracking operates in three stages:
 
-*Registration.* When a tool returns external data (e.g., web_fetch result), the framework — before the LLM sees the result — wraps the content via `wrap_external_content()`: (i) the content is enclosed in boundary markers with a random 16-hex-character ID (2⁶⁴ possible IDs, preventing marker spoofing); (ii) any existing boundary-like markers within the content are sanitized to `[[MARKER_SANITIZED]]`, preventing nested boundary confusion; (iii) Unicode homoglyphs are folded (e.g., full-width `＜` → ASCII `<`) and invisible characters stripped, preventing visual attacks that bypass marker detection. The wrapped content and its taint level (EXTERNAL) are registered in TaintStore with a SHA-256 fingerprint.
+*Registration.* When a tool returns external data (e.g., web_fetch result), the framework — before the LLM sees the result — wraps the content in cryptographically tagged boundary markers (random 16-hex ID, 2⁶⁴ marker space) and registers it in TaintStore with a SHA-256 fingerprint and taint level EXTERNAL. The wrapping process includes marker sanitization (preventing nested boundary spoofing) and Unicode normalization (preventing homoglyph attacks that bypass marker detection). Implementation details are described in Methods.
 
 *Propagation.* CausalTaintTracker maintains a monotonically non-decreasing taint level per batch (Theorem 4): once EXTERNAL data is observed, the batch is permanently marked as contaminated.
 
