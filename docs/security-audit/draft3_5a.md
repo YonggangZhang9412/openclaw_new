@@ -1,0 +1,43 @@
+## 6. Related Work
+
+### 6.1 Prompt injection defenses
+
+Existing defenses fall into three categories. **Detection-based approaches** (pattern matching, classifier models, perplexity analysis¹⁴) face the fundamental limitation that adversarial encodings are open-ended. **Instruction hierarchy approaches**¹⁸ establish precedence among instruction sources but depend on LLM compliance under adversarial pressure. **Architectural separation approaches**, most notably CaMeL¹², introduce Privileged/Quarantined LLM separation and data provenance tracking. Our work extends CaMeL in three ways: (1) identifying EventBus as a structural prerequisite for capability security; (2) dual-layer taint tracking (content-level + causal-level) versus CaMeL's single-layer provenance; (3) quantitative probability bounds (Theorem 1) rather than qualitative security arguments. CaMeL reports 2.7-2.8× token overhead; our deterministic Gate requires zero additional LLM calls.
+
+### 6.2 Capability-based security
+
+Capability-based security, originating with Dennis and Van Horn (1966)¹¹, replaces ambient authority with explicit capability tokens. Our contribution adapts capability security to LLM agents, where capabilities must be scoped not to principal *identity* but to *operational context* — requiring the EventBus infrastructure of Section 3.2. The FINOS Agent Authority Least Privilege Framework²¹ independently advocates similar principles at the governance level; our work provides the architectural implementation with formal guarantees.
+
+### 6.3 Taint tracking
+
+Taint tracking has a rich history (Perl's taint mode, DIFT²²). Our dual-layer design — content-level fingerprinting complemented by irrevocable causal-level tracking — addresses LLM-mediated information flow, where the processing entity can arbitrarily transform data while preserving semantic content.
+
+### 6.4 Alignment and structural security
+
+Behavioral safety (RLHF²³, constitutional AI²⁴) addresses *what the agent wants to do*. Structural security (our contribution) addresses *what the agent is allowed to do*. These are complementary: alignment reduces p(injection succeeds); structural security bounds the consequence of successful injection. The mature security posture requires both.
+
+---
+
+## 7. Limitations
+
+### 7.1 Semantic attacks
+
+The CapabilityGate constrains *which tools* are called with *what data*, but cannot evaluate the *semantic appropriateness* of content generated within those constraints.
+
+### 7.2 Taint tracking trade-offs
+
+**False negatives.** LLM reasoning chains may synthesize external data undetectably by content-level fingerprinting. CausalTaintTracker mitigates this but resets per batch, leaving a cross-batch gap.
+
+**False positives.** CausalTaintTracker blocks all external actions in a batch once any external data is observed — including legitimate operations. This tension is fundamental: precise tracking through the LLM's opaque reasoning would require interpretability capabilities that do not exist.
+
+### 7.3 Cross-batch context contamination
+
+External data from prior batches may persist in session history and influence LLM behavior in subsequent locally-trusted batches. CausalTaintTracker could persist across batches at the cost of severe usability penalties.
+
+### 7.4 Policy completeness
+
+Tool classification (𝒯_R, 𝒯_X, 𝒯_U) and EVENT_TOOL_GRANTS are manually curated. Misclassification weakens the real-world guarantee without affecting formal correctness.
+
+### 7.5 Formal verification
+
+Supplementary Notes provide hand proofs. Machine-verified proofs (TLA+, Coq, Lean) remain future work. The CapabilityGate's deterministic nature makes it amenable to such verification.
