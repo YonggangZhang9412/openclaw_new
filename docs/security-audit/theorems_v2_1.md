@@ -2,22 +2,40 @@
 
 ## 1. Model and Definitions
 
-**Definition 1 (Agent System).** ℳ = (𝒮, s₀, 𝒯, 𝒜, δ, L, E, P), where 𝒯 = {t₁,...,t_n}, L: 𝒮 → Δ(𝒜 ∪ {⊥}), E: 𝒜 × 𝒮 → {ALLOW, DENY}, P: 𝒮 → 𝒫(𝒯).
+**Definition 1 (Agent System).** An agent system is a tuple ℳ = (𝒮, s₀, 𝒯, L, P) where:
+- 𝒮 is the set of states (encoding LLM context, session history, and tool results)
+- s₀ ∈ 𝒮 is the initial state
+- 𝒯 = {t₁, ..., t_n} is a finite set of n tools
+- L: 𝒮 → Δ(𝒯 × Args ∪ {⊥}) is the LLM planning function (stochastic), producing a tool invocation or ⊥
+- P: 𝒮 → 𝒫(𝒯) is the permission model assigning authorized tools to each state
 
-**Definition 2 (Tool Classification).** 𝒯_R = {t ∈ 𝒯 | reads_sensitive(t)}, 𝒯_X = {t ∈ 𝒯 | sends_external(t)}, 𝒯_U = {t ∈ 𝒯 | receives_untrusted(t)}, with |𝒯_R| = n_R, |𝒯_X| = n_X, |𝒯_U| = n_U.
+**Definition 2 (Tool Classification).** The tool set 𝒯 is classified into three (possibly overlapping) subsets:
+- 𝒯_R = {t ∈ 𝒯 | reads_sensitive(t)}: tools that can read sensitive data, |𝒯_R| = n_R
+- 𝒯_X = {t ∈ 𝒯 | sends_external(t)}: tools that can transmit data externally, |𝒯_X| = n_X
+- 𝒯_U = {t ∈ 𝒯 | receives_untrusted(t)}: tools that introduce untrusted data, |𝒯_U| = n_U
 
-**Definition 3 (CapabilityToken).** For batch b, token τ_b specifies τ_b.tools ⊆ 𝒯 with |τ_b.tools| = k, constructed from event metadata independent of L.
+**Definition 3 (CapabilityToken).** For each event batch b, a CapabilityToken τ_b specifies:
+- τ_b.tools ⊆ 𝒯 with |τ_b.tools| = k_b (the granted tool set for this batch)
+- τ_b is constructed from event metadata by a deterministic CapabilityIssuer, independent of L
 
-**Definition 4 (Batch Events).** For batch b, define:
-- A = {injection succeeds}, Pr[A] = p
-- B_R = {τ_b.tools ∩ 𝒯_R ≠ ∅}, B_X = {τ_b.tools ∩ 𝒯_X ≠ ∅}
-- C = {τ_b.tools ∩ 𝒯_U ≠ ∅ ∧ τ_b.tools ∩ 𝒯_R ≠ ∅ ∧ τ_b.tools ∩ 𝒯_X ≠ ∅}
-- D = {taint tracking evaded}, Pr[D | A, B_R, B_X, C] = q
-- Exfil(b) = A ∩ B_R ∩ B_X ∩ C ∩ D
+Let k = max_b k_b denote the maximum token size across all batches.
+
+**Assumption 1 (Worst-Case Token Model).** For the purpose of bounding attack probability, we model the token as selecting k tools uniformly at random from 𝒯 without replacement. This is a worst-case model: the actual CapabilityIssuer selects tools deterministically based on event type, typically granting fewer tools and avoiding dangerous combinations. Any bound derived under the uniform model is therefore a valid upper bound on the actual system.
+
+**Definition 4 (Batch Events).** For batch b, define the following events:
+- A = {injection succeeds}: adversarial data in the batch causally influences L's output. Pr[A] = p.
+- B_R = {τ_b.tools ∩ 𝒯_R ≠ ∅}: at least one sensitive-read tool is in the token.
+- B_X = {τ_b.tools ∩ 𝒯_X ≠ ∅}: at least one external-send tool is in the token.
+- C = {¬R₂(τ_b)}: the Rule of Two does not block the attack chain. When R₂ is enforced (R₂(τ_b) = 1), the token construction guarantees that if both B_R and B_X hold, then τ_b.tools ∩ 𝒯_U = ∅ — i.e., no untrusted-input tool is granted alongside sensitive-read and external-send tools. Therefore Pr[C | B_R, B_X, R₂ = 1] = 0.
+- D = {taint tracking evaded}: both TaintStore and CausalTaintTracker fail to block the data flow. Pr[D | A, B_R, B_X, C] = q.
+- Exfil(b) = A ∩ B_R ∩ B_X ∩ C ∩ D.
 
 **Definition 5 (Taint Lattice).** (Λ, ≤) with Λ = {USER, INTERNAL, EXTERNAL}, USER < INTERNAL < EXTERNAL, ⊥ = USER, ⊤ = EXTERNAL.
 
-**Definition 6 (CausalTaintTracker).** For batch with m tool executions: τ₀ = ⊥, τ_k = max(τ_{k-1}, taint(t_k)) for k = 1,...,m.
+**Definition 6 (CausalTaintTracker).** For a batch with m tool executions, the causal taint sequence is:
+
+τ₀ = ⊥
+τ_k = max(τ_{k-1}, taint(t_k))    for k = 1, ..., m
 
 ---
 
@@ -25,78 +43,134 @@
 
 **Theorem 1 (Multi-Barrier Exfiltration Bound).** In an agent system with n tools where each event batch is authorized a token of at most k tools, the probability that an adversary successfully exfiltrates sensitive data through a single batch is bounded by the product of five independent factors — each corresponding to a distinct architectural barrier that the attacker must simultaneously bypass:
 
-Pr[Exfil(b)] ≤ p · (kn_R/n) · (kn_X/n) · (1 - R₂) · q
+Pr[Exfil(b)] ≤ p · min(kn_R/n, kn_X/n) · (1 - R₂) · q
 
-where p is the prompt injection success rate, kn_R/n and kn_X/n are the probabilities that the batch token contains a sensitive-read tool and an external-send tool respectively, R₂ ∈ {0,1} indicates whether the Rule of Two is enforced (R₂ = 1 zeroes the entire bound), and q is the cross-batch taint evasion probability.
+where p is the prompt injection success rate, kn_R/n and kn_X/n are union-bound upper bounds on the probability that the token contains a sensitive-read or external-send tool respectively (the min reflects that exfiltration requires both), R₂ ∈ {0,1} indicates whether the Rule of Two is enforced (R₂ = 1 zeroes the entire bound), and q is the cross-batch taint evasion probability.
 
 **Proof.**
 
 Pr[Exfil(b)]
 = Pr[A ∩ B_R ∩ B_X ∩ C ∩ D]                                                        (Def. 4)
 = Pr[A] · Pr[B_R ∩ B_X | A] · Pr[C | A, B_R, B_X] · Pr[D | A, B_R, B_X, C]        (chain rule)
-= p · Pr[B_R ∩ B_X] · Pr[C | B_R, B_X] · q                                         (i)
 
-where line (i) follows from: Pr[A] = p (Def. 4); B_R, B_X ⊥ A (τ_b issued before L invoked, Def. 3); C ⊥ A | B_R, B_X (C is a property of τ_b); Pr[D | ·] = q (Def. 4).
+We simplify each factor.
 
-We bound Pr[B_R]. Let Z_R = |τ_b.tools ∩ 𝒯_R|. Then:
+Pr[A] = p                                                                            (Def. 4)
+
+For Pr[B_R ∩ B_X | A]: B_R and B_X are deterministic functions of τ_b (given τ_b, each is 0 or 1). By Def. 3, τ_b = CapabilityIssuer(event_metadata), which does not depend on L. A is an event determined by L's behavior. Since τ_b ⊥ L, any deterministic function of τ_b is independent of any event determined by L. Therefore:
+
+B_R ⊥ A,    B_X ⊥ A
+⟹ Pr[B_R ∩ B_X | A] = Pr[B_R ∩ B_X]                                                (i)
+
+For Pr[C | A, B_R, B_X]: C = {¬R₂(τ_b)} is also a deterministic function of τ_b, so C ⊥ A. When R₂ = 1 and B_R ∩ B_X holds, the token construction guarantees τ_b.tools ∩ 𝒯_U = ∅ (Def. 4), so C cannot occur:
+
+R₂ = 1 ∧ B_R ∧ B_X ⟹ τ_b.tools ∩ 𝒯_U = ∅ ⟹ ¬C
+⟹ Pr[C | B_R, B_X, R₂ = 1] = 0
+
+When R₂ = 0, no such guarantee exists, so Pr[C | B_R, B_X, R₂ = 0] ≤ 1. Combining:
+
+Pr[C | B_R, B_X] ≤ 1 - R₂                                                           (ii)
+
+Pr[D | A, B_R, B_X, C] = q                                                           (Def. 4)
+
+Substituting into the chain rule:
+
+Pr[Exfil(b)] ≤ p · Pr[B_R ∩ B_X] · (1 - R₂) · q                                    (iii)
+
+We now bound Pr[B_R ∩ B_X]. Under Assumption 1, the token selects k tools uniformly from 𝒯 without replacement.
+
+First, bound Pr[B_R]. Let Z_R = |τ_b.tools ∩ 𝒯_R|. Then B_R = {Z_R ≥ 1}:
 
 Pr[¬B_R]
 = Pr[Z_R = 0]
 = C(n - n_R, k) / C(n, k)                                                           (hypergeometric)
-= ∏_{i=0}^{k-1} (n - n_R - i) / (n - i)                                             (expand binomials)
-= ∏_{i=0}^{k-1} [1 - n_R / (n - i)]                                                 (factor each term)
-≥ ∏_{i=0}^{k-1} [1 - n_R / (n - k + 1)]                                             (n - i ≥ n - k + 1)
-= [1 - n_R / (n - k + 1)]^k                                                          (ii)
+= ∏_{i=0}^{k-1} (n - n_R - i) / (n - i)                                             (expand)
 
-For the upper bound on Pr[B_R], set x = n_R / n ∈ [0, 1]:
+Each factor satisfies (n - n_R - i) ≤ (n - n_R) since i ≥ 0. So:
 
-Pr[B_R]
-= 1 - Pr[¬B_R]
-= 1 - ∏_{i=0}^{k-1} (n - n_R - i) / (n - i)
-≤ 1 - ∏_{i=0}^{k-1} (1 - n_R / n)                                                   (n - i ≤ n ⟹ 1/(n-i) ≥ 1/n)
-= 1 - (1 - x)^k                                                                      (iii)
-≤ kx                                                                                  (Bernoulli: 1-(1-x)^k ≤ kx, x ∈ [0,1])
-= kn_R / n
-=: α_R                                                                                (iv)
+∏_{i=0}^{k-1} (n - n_R - i) / (n - i)
+≤ ∏_{i=0}^{k-1} (n - n_R) / (n - i)                                                 (numerator: n-n_R-i ≤ n-n_R)
+≤ ∏_{i=0}^{k-1} (n - n_R) / (n - k + 1)                                             (denominator: n-i ≥ n-k+1)
+= ((n - n_R) / (n - k + 1))^k
 
-By identical argument replacing n_R with n_X:
+This gives a lower bound on Pr[¬B_R], hence an upper bound on Pr[B_R]:
+
+Pr[B_R] = 1 - Pr[¬B_R]
+
+For a simpler bound, note each factor in the product satisfies:
+
+(n - n_R - i) / (n - i)
+= 1 - n_R / (n - i)
+≥ 1 - n_R / (n - k + 1)                                                              (n - i ≥ n - k + 1)
+
+So: Pr[¬B_R] ≥ (1 - n_R/(n-k+1))^k
+
+For the upper bound direction, each factor also satisfies:
+
+(n - n_R - i) / (n - i)
+≤ (n - n_R) / n                                                                       (n - n_R - i ≤ n - n_R and n - i ≥ n impossible,
+                                                                                        but (n-n_R-i)/(n-i) = 1 - n_R/(n-i) ≤ 1 - n_R/n
+                                                                                        since n - i ≤ n ⟹ n_R/(n-i) ≥ n_R/n)
+
+Wait — we need the correct direction. We want Pr[B_R] ≤ ..., which requires Pr[¬B_R] ≥ .... Since n_R/(n-i) ≥ n_R/n for i ≥ 0:
+
+1 - n_R/(n-i) ≤ 1 - n_R/n
+
+So each factor is at most (1 - n_R/n), and:
+
+Pr[¬B_R] = ∏_{i=0}^{k-1} [1 - n_R/(n-i)]
+         ≤ ∏_{i=0}^{k-1} [1 - n_R/n]                                                 (WRONG direction for upper bounding Pr[B_R])
+
+This gives Pr[¬B_R] ≤ (1-n_R/n)^k, hence Pr[B_R] ≥ 1-(1-n_R/n)^k. This is a LOWER bound on Pr[B_R], not upper.
+
+For the UPPER bound on Pr[B_R], we use the union bound directly:
+
+Pr[B_R] = Pr[∃ t ∈ 𝒯_R: t ∈ τ_b.tools]
+        ≤ Σ_{t ∈ 𝒯_R} Pr[t ∈ τ_b.tools]                                             (union bound)
+        = n_R · (k / n)                                                                (each tool selected with prob k/n)
+        = kn_R / n
+        =: α_R                                                                        (iv)
+
+By identical argument:
 
 Pr[B_X] ≤ kn_X / n =: α_X                                                            (v)
 
-For the joint probability:
+For Pr[B_R ∩ B_X], we use the trivial bound:
+
+Pr[B_R ∩ B_X] ≤ min(Pr[B_R], Pr[B_X]) ≤ min(α_R, α_X)                                (vi)
+
+Since exfiltration requires BOTH a read tool and a send tool, we can write a tighter parameterized bound. B_R ∩ B_X requires the existence of t_r ∈ 𝒯_R ∩ τ_b.tools AND t_x ∈ 𝒯_X ∩ τ_b.tools (not necessarily distinct). By union bound on pairs:
 
 Pr[B_R ∩ B_X]
-= Pr[B_R] · Pr[B_X | B_R]
-≤ Pr[B_R] · 1                                                                         (trivial bound)
-≤ α_R                                                                                  (vi)
+= Pr[∃ t_r ∈ 𝒯_R ∩ τ_b.tools, ∃ t_x ∈ 𝒯_X ∩ τ_b.tools]
+≤ Σ_{t_r ∈ 𝒯_R} Σ_{t_x ∈ 𝒯_X} Pr[t_r ∈ τ_b.tools ∧ t_x ∈ τ_b.tools]
 
-We can also write:
+For t_r ≠ t_x: Pr[t_r ∈ τ ∧ t_x ∈ τ] = k(k-1) / (n(n-1))                           (both drawn without replacement)
+For t_r = t_x (when t ∈ 𝒯_R ∩ 𝒯_X): Pr[t ∈ τ] = k/n
 
-Pr[B_R ∩ B_X] ≤ min(Pr[B_R], Pr[B_X]) ≤ min(α_R, α_X)                                (vi')
+Let n_RX = |𝒯_R ∩ 𝒯_X|. Then:
 
-For the product bound (valid when 𝒯_R ∩ 𝒯_X = ∅):
+Pr[B_R ∩ B_X]
+≤ n_RX · (k/n) + (n_R · n_X - n_RX) · k(k-1)/(n(n-1))                               (vii)
+≤ n_RX · (k/n) + n_R · n_X · k(k-1)/(n(n-1))                                         (drop -n_RX term)
+≤ n_RX · (k/n) + n_R · n_X · k²/n²                                                    (k(k-1)/(n(n-1)) ≤ k²/n² for n ≥ 2)
+= (k/n) · [n_RX + n_R · n_X · k/n]                                                    (factor k/n)
 
-Pr[B_R ∩ B_X] = Pr[B_R] · Pr[B_X | B_R] ≤ Pr[B_R] · Pr[B_X] ≤ α_R · α_X            (vii)
+For a clean bound, use (vi) directly: Pr[B_R ∩ B_X] ≤ min(α_R, α_X).
 
-Note: when 𝒯_R ∩ 𝒯_X ≠ ∅, B_R and B_X are positively correlated, so (vii) is conservative as an upper bound. We use (vii) as it yields the tightest parameterized bound.
-
-For the Rule of Two factor, when R₂ = 1, token construction guarantees ¬C given any B_R, B_X:
-
-Pr[C | B_R, B_X] = 1 - R₂                                                             (viii)
-
-Substituting (i), (iv), (v), (vii), (viii):
+Substituting (iii), (iv) or (v), and (ii):
 
 Pr[Exfil(b)]
-≤ p · Pr[B_R ∩ B_X] · (1 - R₂) · q                                                   (from (i))
-≤ p · α_R · α_X · (1 - R₂) · q                                                        (from (vii))
-= p · (kn_R / n) · (kn_X / n) · (1 - R₂) · q                                          ∎
+≤ p · Pr[B_R ∩ B_X] · (1 - R₂) · q                                                   (from (iii))
+≤ p · min(α_R, α_X) · (1 - R₂) · q                                                    (from (vi))
+= p · min(kn_R/n, kn_X/n) · (1 - R₂) · q                                              ∎
 
 ---
 
 
 ## 3. Theorem 2: Session-Level Compound Bound
 
-**Theorem 2 (Session-Level Security Degradation).** Over a session of B independent batches, the probability that at least one batch is successfully exploited grows with B but remains bounded. Let ε = p · α_R · α_X · (1-R₂) · q be the per-batch bound from Theorem 1. Then:
+**Theorem 2 (Session-Level Security Degradation).** Over a session of B batches with no cross-batch state dependence (see Remark below), the probability that at least one batch is successfully exploited grows with B but remains bounded. Let ε = p · min(α_R, α_X) · (1-R₂) · q be the per-batch bound from Theorem 1. Then:
 
 Pr[∃ b ∈ {1,...,B}: Exfil(b)] ≤ 1 - (1 - ε)^B
 
@@ -124,6 +198,12 @@ Substituting:
 Pr[∃ b: Exfil(b)]
 = 1 - ∏_{b=1}^{B} (1 - Pr[Exfil(b)])
 ≤ 1 - (1 - ε)^B                                                                   ∎
+
+**Remark (Independence Assumption).** The product form ∏(1-Pr[Exfil(b)]) assumes batch independence. In practice, session history shared across batches introduces dependence (the source of cross-batch contamination bounded by q). If independence does not hold, a weaker union bound applies:
+
+Pr[∃ b: Exfil(b)] ≤ Σ_{b=1}^{B} Pr[Exfil(b)] ≤ Bε
+
+which is valid without any independence assumption but is looser for small ε.
 
 **Proposition 2.1 (Ambient Authority Baseline).**
 
@@ -300,24 +380,45 @@ Pr[Exfil(b)] = 0                                       (Theorem 3)
 
 **Case 2: R₂ = 0 (worst case).**
 
-α_R = 5 · 8 / 55 = 40/55 ≈ 0.727
-α_X = 5 · 6 / 55 = 30/55 ≈ 0.545
+Union bound (Theorem 1):
+
+α_R = kn_R/n = 5 · 8 / 55 = 40/55 ≈ 0.727
+α_X = kn_X/n = 5 · 6 / 55 = 30/55 ≈ 0.545
+min(α_R, α_X) = 0.545
 
 Pr[Exfil(b)]
-≤ 0.5 · 0.727 · 0.545 · 1.0 · 0.1
-= 0.5 · 0.396 · 0.1
-= 0.0198
+≤ p · min(α_R, α_X) · (1 - R₂) · q
+= 0.5 · 0.545 · 1.0 · 0.1
+= 0.0273
+
+Exact hypergeometric values (for comparison with union bound):
+
+Pr[B_R] = 1 - C(47,5)/C(55,5) = 1 - (47·46·45·44·43)/(55·54·53·52·51) ≈ 0.568
+Pr[B_X] = 1 - C(49,5)/C(55,5) = 1 - (49·48·47·46·45)/(55·54·53·52·51) ≈ 0.452
+
+The union bounds α_R = 0.727 and α_X = 0.545 are conservative (true values are 0.568 and 0.452). This confirms the bound is valid but not tight — the actual system is safer than the bound suggests.
+
+Session level (union bound, no independence required):
 
 Pr[∃ b: Exfil(b)]
-≤ 1 - (1 - 0.0198)^{288}
-= 1 - 0.9802^{288}
-≈ 1 - 0.00316
-= 0.997
+≤ B · ε                                                (union bound)
+= 288 · 0.0273
+= 7.85
+
+Since probabilities are capped at 1, this gives Pr ≤ 1 (trivial in worst case without R₂).
+
+Under independence assumption:
+
+Pr[∃ b: Exfil(b)]
+≤ 1 - (1 - 0.0273)^{288}
+= 1 - 0.9727^{288}
+≈ 1 - 0.000275
+= 0.9997
 
 **Comparison with ambient authority:**
 
-Pr_ambient[Exfil(b)] ≥ p = 0.5
-Pr_capability[Exfil(b)] ≤ 0.0198
-
-Reduction: 0.5 / 0.0198 ≈ 25× per batch (without Rule of Two).
-With Rule of Two: Pr = 0 vs Pr ≥ 0.5 (infinite reduction).
+| Metric | Ambient authority | Event-scoped (R₂=0) | Event-scoped (R₂=1) |
+|--------|-------------------|---------------------|----------------------|
+| Pr[Exfil(b)] | ≥ 0.5 | ≤ 0.0273 | = 0 |
+| Per-batch reduction | — | 18× | ∞ |
+| Session (B=288) | ≈ 1.0 | ≤ 0.9997 | = 0 |
