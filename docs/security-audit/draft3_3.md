@@ -45,12 +45,12 @@ The CapabilityIssuer classifies each event batch into one of three trust levels 
 | Trust level | Criteria | Tool grant policy | Security consequence |
 |-------------|----------|-------------------|---------------------|
 | LOCAL_TRUSTED | Internal sources (timer, cron, file, process, network) | Full tool set relevant to event type | Standard Theorem 1 bound applies |
-| REMOTE_VERIFIED | Authenticated device via HMAC challenge-response | High-risk tools removed (bash, daemon_restart) | α_R, α_X reduced; tighter bound |
-| REMOTE_OPEN | Unverified external source (custom webhook, unauthenticated WS) | All external-action tools removed (bash, curl, wget, send_email, run_command) | α_X = 0 → Pr[Exfil] = 0 |
+| REMOTE_VERIFIED | Authenticated device via HMAC challenge-response | High-risk tools removed (bash, daemon_restart) | $\alpha_R$, $\alpha_X$ reduced; tighter bound |
+| REMOTE_OPEN | Unverified external source (custom webhook, unauthenticated WS) | All external-action tools removed (bash, curl, wget, send_email, run_command) | $\alpha_X$ = 0 → $\Pr[\text{Exfil}]$ = 0 |
 
-**Corollary (Trust-Level Zero Guarantee).** For REMOTE_OPEN events, no external-action tool is granted (α_X = 0). Since exfiltration requires transmitting data externally, and no external-send tool is available, exfiltration is structurally impossible regardless of injection success rate, Rule of Two status, or taint evasion capability. As we formalize in Theorem 1 (Section 4): Pr[Exfil | REMOTE_OPEN] ≤ p · min(α_R, 0) · (1-R₂) · q = 0.
+**Corollary (Trust-Level Zero Guarantee).** For REMOTE_OPEN events, no external-action tool is granted ($\alpha_X$ = 0). Since exfiltration requires transmitting data externally, and no external-send tool is available, exfiltration is structurally impossible regardless of injection success rate, Rule of Two status, or taint evasion capability. As we formalize in Theorem 1 (Section 4): $\Pr[\text{Exfil} \mid \text{REMOTE\_OPEN}]$ ≤ $p \cdot \min(\alpha_R, 0) \cdot (1-R_2) \cdot q$ = 0.
 
-This guarantee is strictly stronger than the Rule of Two (Theorem 3, Section 4), which requires R₂ = 1 and applies only within a single batch. The trust-level guarantee holds regardless of R₂ and regardless of cross-batch contamination.
+This guarantee is strictly stronger than the Rule of Two (Theorem 3, Section 4), which requires $R_2$ = 1 and applies only within a single batch. The trust-level guarantee holds regardless of $R_2$ and regardless of cross-batch contamination.
 
 ### 3.4 Three-layer CapabilityGate
 
@@ -60,13 +60,13 @@ This guarantee is strictly stronger than the Rule of Two (Theorem 3, Section 4),
 
 Taint tracking operates in three stages:
 
-*Registration.* When a tool returns external data (e.g., web_fetch result), the framework — before the LLM sees the result — wraps the content in cryptographically tagged boundary markers (random 16-hex ID, 2⁶⁴ marker space) and registers it in TaintStore with a SHA-256 fingerprint and taint level EXTERNAL. The wrapping process includes marker sanitization (preventing nested boundary spoofing) and Unicode normalization (preventing homoglyph attacks that bypass marker detection). Implementation details are described in Methods.
+*Registration.* When a tool returns external data (e.g., web_fetch result), the framework — before the LLM sees the result — wraps the content in cryptographically tagged boundary markers (random 16-hex ID, $2^{64}$ marker space) and registers it in TaintStore with a SHA-256 fingerprint and taint level EXTERNAL. The wrapping process includes marker sanitization (preventing nested boundary spoofing) and Unicode normalization (preventing homoglyph attacks that bypass marker detection). Implementation details are described in Methods.
 
 *Propagation.* CausalTaintTracker maintains a monotonically non-decreasing taint level per batch (Theorem 4): once EXTERNAL data is observed, the batch is permanently marked as contaminated.
 
-*Verification.* When the LLM proposes a tool call, CapabilityGate Check 2 queries TaintStore (content-level: fingerprint and substring matching) and CausalTaintTracker (context-level: round taint ≤ policy threshold). Both must pass for the call to proceed.
+*Verification.* When the LLM proposes a tool call, CapabilityGate Check 2 queries TaintStore (content-level: fingerprint and substring matching) and CausalTaintTracker (context-level: round taint $\leq$ policy threshold). Both must pass for the call to proceed.
 
-**Layer 3 (Rule of Two).** Exfiltration requires three simultaneous conditions: untrusted input (U), sensitive data access (S), and external action (X). The Rule of Two constrains the token so at most two of {U, S, X} hold per batch. By Theorem 3, Pr[Exfil] = 0 when enforced. The Rule of Two is enforced by default for all batches. The R₂ = 0 case in the quantitative analysis (Section 4.3) represents a conservative worst-case scenario for theoretical completeness — for example, if the tool classification 𝒯_U, 𝒯_R, 𝒯_X is incomplete and a tool is miscategorized, the Rule of Two may fail to detect the triple condition. The R₂ = 0 bound characterizes the architecture's residual security when this particular layer is ineffective.
+**Layer 3 (Rule of Two).** Exfiltration requires three simultaneous conditions: untrusted input (U), sensitive data access (S), and external action (X). The Rule of Two constrains the token so at most two of {U, S, X} hold per batch. By Theorem 3, $\Pr[\text{Exfil}]$ = 0 when enforced. The Rule of Two is enforced by default for all batches. The $R_2$ = 0 case in the quantitative analysis (Section 4.3) represents a conservative worst-case scenario for theoretical completeness — for example, if the tool classification $\mathcal{T}_U, \mathcal{T}_R, \mathcal{T}_X$ is incomplete and a tool is miscategorized, the Rule of Two may fail to detect the triple condition. The $R_2$ = 0 bound characterizes the architecture's residual security when this particular layer is ineffective.
 
 ### 3.5 Security properties
 
@@ -76,13 +76,13 @@ Taint tracking operates in three stages:
 
 **Fail-safe defaults.** TaintStore is fail-open (unknown sources allowed), but CausalTaintTracker is fail-safe (contamination irrevocable within batch). Unmapped event types receive the most restrictive token.
 
-**Auditable decisions.** Every Gate decision includes a machine-readable reason (e.g., "DENY: param 'to' taint=EXTERNAL, policy requires ≤USER").
+**Auditable decisions.** Every Gate decision includes a machine-readable reason (e.g., "DENY: param 'to' taint=EXTERNAL, policy requires $\leq$ USER").
 
 ### 3.6 Case analysis: the architecture against the OpenClaw hazard topology
 
 **Malicious supply-chain skills (12% of ClawHub compromised).** Under event-scoped capability authority, **token scoping** (Layer 1) restricts the skill's available tools to those relevant to its declared function, and **taint tracking** (Layer 2) registers all skill-introduced data as EXTERNAL, preventing its use as arguments to sensitive tools.
 
-**CVE-2026-25253: cross-site WebSocket hijacking RCE.** Under our architecture, an unauthenticated WebSocket message is classified as REMOTE_OPEN. By the trust-level zero guarantee (Section 3.3), α_X = 0 and Pr[Exfil] = 0 — the RCE chain is structurally impossible because code execution tools are never granted for untrusted sources.
+**CVE-2026-25253: cross-site WebSocket hijacking RCE.** Under our architecture, an unauthenticated WebSocket message is classified as REMOTE_OPEN. By the trust-level zero guarantee (Section 3.3), $\alpha_X$ = 0 and $\Pr[\text{Exfil}]$ = 0 — the RCE chain is structurally impossible because code execution tools are never granted for untrusted sources.
 
 **Persistent hallucination loops and intent drift.** **Automatic privilege decay** ensures each batch receives a fresh token with 300-second TTL. Previous context errors do not accumulate privileges.
 

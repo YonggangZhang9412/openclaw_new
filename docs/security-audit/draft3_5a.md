@@ -36,7 +36,7 @@ External data from prior batches may persist in session history and influence LL
 
 ### 7.4 Policy completeness
 
-Tool classification (𝒯_R, 𝒯_X, 𝒯_U) and EVENT_TOOL_GRANTS are manually curated. Misclassification weakens the real-world guarantee without affecting formal correctness.
+Tool classification ($\mathcal{T}_R$, $\mathcal{T}_X$, $\mathcal{T}_U$) and EVENT_TOOL_GRANTS are manually curated. Misclassification weakens the real-world guarantee without affecting formal correctness.
 
 ### 7.5 Formal verification
 
