@@ -93,37 +93,7 @@ Each factor satisfies (n - n_R - i) ≤ (n - n_R) since i ≥ 0. So:
 ≤ ∏_{i=0}^{k-1} (n - n_R) / (n - k + 1)                                             (denominator: n-i ≥ n-k+1)
 = ((n - n_R) / (n - k + 1))^k
 
-This gives a lower bound on Pr[¬B_R], hence an upper bound on Pr[B_R]:
-
-Pr[B_R] = 1 - Pr[¬B_R]
-
-For a simpler bound, note each factor in the product satisfies:
-
-(n - n_R - i) / (n - i)
-= 1 - n_R / (n - i)
-≥ 1 - n_R / (n - k + 1)                                                              (n - i ≥ n - k + 1)
-
-So: Pr[¬B_R] ≥ (1 - n_R/(n-k+1))^k
-
-For the upper bound direction, each factor also satisfies:
-
-(n - n_R - i) / (n - i)
-≤ (n - n_R) / n                                                                       (n - n_R - i ≤ n - n_R and n - i ≥ n impossible,
-                                                                                        but (n-n_R-i)/(n-i) = 1 - n_R/(n-i) ≤ 1 - n_R/n
-                                                                                        since n - i ≤ n ⟹ n_R/(n-i) ≥ n_R/n)
-
-Wait — we need the correct direction. We want Pr[B_R] ≤ ..., which requires Pr[¬B_R] ≥ .... Since n_R/(n-i) ≥ n_R/n for i ≥ 0:
-
-1 - n_R/(n-i) ≤ 1 - n_R/n
-
-So each factor is at most (1 - n_R/n), and:
-
-Pr[¬B_R] = ∏_{i=0}^{k-1} [1 - n_R/(n-i)]
-         ≤ ∏_{i=0}^{k-1} [1 - n_R/n]                                                 (WRONG direction for upper bounding Pr[B_R])
-
-This gives Pr[¬B_R] ≤ (1-n_R/n)^k, hence Pr[B_R] ≥ 1-(1-n_R/n)^k. This is a LOWER bound on Pr[B_R], not upper.
-
-For the UPPER bound on Pr[B_R], we use the union bound directly:
+For the upper bound on Pr[B_R], we use the union bound directly:
 
 Pr[B_R] = Pr[∃ t ∈ 𝒯_R: t ∈ τ_b.tools]
         ≤ Σ_{t ∈ 𝒯_R} Pr[t ∈ τ_b.tools]                                             (union bound)
@@ -232,9 +202,9 @@ Pr[Exfil(b)] = 0    when R₂ = 1
 **Proof.**
 
 Pr[Exfil(b)]
-≤ p · α_R · α_X · (1 - R₂) · q                      (Theorem 1)
-= p · α_R · α_X · (1 - 1) · q                        (R₂ = 1)
-= p · α_R · α_X · 0 · q
+≤ p · min(α_R, α_X) · (1 - R₂) · q                   (Theorem 1)
+= p · min(α_R, α_X) · (1 - 1) · q                    (R₂ = 1)
+= p · min(α_R, α_X) · 0 · q
 = 0
 
 0 ≤ Pr[Exfil(b)] ≤ 0                                  (probability axiom + above)

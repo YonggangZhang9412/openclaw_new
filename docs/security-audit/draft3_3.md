@@ -26,7 +26,7 @@ These principles impose requirements on the underlying architecture that necessi
 **Gate 1: EventInjectionGate (producer-side).** Before an event enters the EventBus, the EventInjectionGate enforces per-source security policies:
 - **Rate limiting**: sliding 1-second window per source (ADMIN: 200/s, CLI: 100/s, MOBILE: 10/s)
 - **Payload size cap**: 16KB (MOBILE) to 131KB (ADMIN) per event
-- **Cascade depth enforcement**: hard limit of 20, automatically incremented by the framework — consumers cannot circumvent this invariant
+- **Cascade depth enforcement**: enforces Requirement B at the point of event injection, rejecting events that exceed the depth limit
 - **Event type whitelist**: external sources may only inject event types permitted by their policy
 - **CRITICAL priority control**: requires an unforgeable EscalationToken (UUID-based, time-bounded, use-limited)
 
@@ -66,7 +66,7 @@ Taint tracking operates in three stages:
 
 *Verification.* When the LLM proposes a tool call, CapabilityGate Check 2 queries TaintStore (content-level: fingerprint and substring matching) and CausalTaintTracker (context-level: round taint ≤ policy threshold). Both must pass for the call to proceed.
 
-**Layer 3 (Rule of Two).** Exfiltration requires three simultaneous conditions: untrusted input (U), sensitive data access (S), and external action (X). The Rule of Two constrains the token so at most two of {U, S, X} hold per batch. By Theorem 3, Pr[Exfil] = 0 when enforced.
+**Layer 3 (Rule of Two).** Exfiltration requires three simultaneous conditions: untrusted input (U), sensitive data access (S), and external action (X). The Rule of Two constrains the token so at most two of {U, S, X} hold per batch. By Theorem 3, Pr[Exfil] = 0 when enforced. The Rule of Two is enforced by default for all batches. The R₂ = 0 case in the quantitative analysis (Section 4.3) represents a conservative worst-case scenario for theoretical completeness — for example, if the tool classification 𝒯_U, 𝒯_R, 𝒯_X is incomplete and a tool is miscategorized, the Rule of Two may fail to detect the triple condition. The R₂ = 0 bound characterizes the architecture's residual security when this particular layer is ineffective.
 
 ### 3.5 Security properties
 

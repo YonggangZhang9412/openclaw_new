@@ -59,22 +59,32 @@ Results will be reported in a companion paper.
 
 ## 5. Societal Implications
 
-### 5.1 Trust infrastructure
+### 5.1 The collapse of proxy trust
 
-AI agents represent a new class of proxy whose faithfulness can be silently subverted through data channels without breaching authentication. Our architecture provides a structural response: the Rule of Two ensures that even if the agent's faithfulness is fully compromised, exfiltration chains cannot complete within an event batch. The trust-level system ensures that for the most untrusted sources, exfiltration is structurally impossible.
+Human society operates on networks of proxy trust — lawyers, financial advisors, physicians — secured by licensing, fiduciary duty, and legal liability developed over centuries. AI agents represent a fundamentally new class of proxy. Unlike human proxies, their faithfulness can be silently subverted through data channels without breaching authentication: a single crafted email can redirect an agent's subsequent actions while its identity credentials remain intact. When 145,000 users deployed OpenClaw agents with access to their email, calendar, and filesystem, they established proxy trust relationships with entities compromisable by a carefully worded paragraph.
 
-### 5.2 Enabling regulation
+Our architecture addresses this through structural containment. The Rule of Two ensures that even if an agent's proxy faithfulness is fully compromised, exfiltration chains cannot complete. The trust-level system ensures that for the most untrusted sources, exfiltration is structurally impossible (Section 3.3). The proxy can fail; the system bounds the severity of exploitation.
+
+### 5.2 The asymmetry of attack and defense
+
+Prompt injection creates a historically unprecedented asymmetry. Attack cost: composing a natural language sentence — no programming skill or exploit development required. Defense cost: restructuring the entire agent architecture from ambient authority to event-driven capability security. This asymmetry means that every agent deployed under the ambient authority model is structurally vulnerable from deployment, and the vulnerability cannot be patched without architectural change — unlike buffer overflows or SQL injection, which can often be fixed with localized patches.
+
+### 5.3 Enabling high-stakes deployment
+
+Today, responsible organizations restrict AI agents to low-stakes tasks precisely because the ambient authority model cannot guarantee safety for consequential actions. Our architecture changes this calculus. A medical AI agent operating under trust-level-specific token issuance cannot exfiltrate patient records through untrusted sources (α_X = 0 for REMOTE_OPEN). A financial agent cannot be tricked into unauthorized transfers because taint tracking prevents externally-sourced account numbers from being used as transfer parameters. A legal AI cannot leak privileged communications because the capability token for processing incoming correspondence does not include tools for outbound communication. These are structural properties verifiable through code inspection, not claims dependent on LLM compliance.
+
+### 5.4 Enabling regulation
 
 Our architecture provides verifiable properties mapping to specific regulatory requirements:
 
 - **Auditable decision trails** (EU AI Act Article 12, Article 14): machine-readable logs of every Gate decision with deterministic justification.
-- **Deterministic security bounds** (Article 15: Robustness and Cybersecurity): the Rule-of-Two invariant is verifiable through code inspection, not statistical testing.
+- **Deterministic security bounds** (Article 15: Robustness and Cybersecurity): the Rule-of-Two invariant and trust-level guarantees are verifiable through code inspection, not statistical testing.
 - **Per-event accountability** (US Executive Order Section 4.1): each agent action traced to a specific triggering event with its authorization chain.
 
-### 5.3 Adoption considerations
+### 5.5 Adoption considerations
 
 **Developer experience.** The event-driven model requires restructuring from imperative request-response flows — a significant paradigm shift.
 
 **Migration path.** Incremental adoption is possible: existing agents can wrap their tool-calling layer with a CapabilityGate. Full EventBus integration provides the strongest guarantees.
 
-**Usability.** CausalTaintTracker's coarse granularity may block legitimate operations when external data is observed in the same batch as outbound communication. Configurable trust policies are necessary.
+**Usability.** CausalTaintTracker's coarse granularity may block legitimate operations when external data is observed in the same batch as outbound communication. Configurable trust policies are necessary to balance security with productivity.

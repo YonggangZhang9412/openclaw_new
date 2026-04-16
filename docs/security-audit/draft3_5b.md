@@ -8,11 +8,11 @@ The EventBus receives events through registered EventSources (8 source types: Ti
 
 ### Device authentication
 
-Remote devices authenticate via HMAC challenge-response (s39_device_auth.py): 32-byte random secret per device, `hmac.compare_digest()` for constant-time comparison, `_DUMMY_SECRET` placeholder for unknown devices (ensuring identical computation path to prevent timing-based enumeration), 300-second clock skew tolerance, nonce one-time use. Authenticated devices are assigned a DeviceScope (ADMIN/CLI/MOBILE), which maps to an InjectionPolicy determining rate limits, payload caps, and allowed event types.
+Remote devices authenticate via HMAC challenge-response: the server generates a nonce and timestamp; the client computes HMAC(secret, nonce ‖ device_id ‖ timestamp) using a 32-byte per-device random secret; the server verifies using constant-time comparison. For unknown device IDs, a dummy secret of equal length is used to ensure identical computation paths, preventing timing-based device enumeration. Clock skew tolerance is 300 seconds; nonces are single-use. Authenticated devices are assigned a DeviceScope (ADMIN/CLI/MOBILE), which maps to an InjectionPolicy determining rate limits, payload caps, and allowed event types.
 
 ### Trust classification
 
-`_classify_event_trust()` inspects `event.source` and `event.origin_chain`:
+The trust classification algorithm inspects `event.source` and `event.origin_chain`:
 - **LOCAL_TRUSTED**: 10 internal sources (timer, cron, file, process, network, node, discovery, contract, task, skill_source)
 - **REMOTE_VERIFIED**: authenticated remote devices (verified by HMAC handshake)
 - **REMOTE_OPEN**: custom events without internal module markers in origin_chain
@@ -37,7 +37,7 @@ For each tool call `(t, args)`:
 
 ### External content wrapping
 
-`wrap_external_content(content, source)` (s12_security.py + tools/_shared/external_content.py):
+The external content wrapping procedure `wrap_external_content(content, source)` operates as follows:
 1. Generate `marker_id = secrets.token_hex(8)` (16 hex chars, 2⁶⁴ possibilities)
 2. Sanitize existing boundary markers: replace with `[[MARKER_SANITIZED]]`
 3. Normalize Unicode homoglyphs: full-width `＜` → ASCII `<`, CJK `〈` → `<` (13 invisible character classes stripped)
@@ -54,4 +54,4 @@ CausalTaintTracker: τ₀ = USER; τ_k = max(τ_{k-1}, taint(t_k)). Monotonic (T
 
 ### Code and data availability
 
-The architecture is implemented in Python as part of the ShadowClaw project (55 tools across 16 module categories). Source code available at [repository URL]. Tool enumeration in Supplementary Table 1.
+The architecture is implemented in Python as part of the ShadowClaw project (55 tools across 16 module categories). Source code is available at [repository URL]; specific module paths are documented in the repository's README. Tool enumeration is provided in Supplementary Table 1.
