@@ -23,7 +23,11 @@
 
 ## 2. Theorem 1: Single-Batch Attack Probability Bound
 
-**Theorem 1.** Pr[Exfil(b)] ≤ p · (kn_R/n) · (kn_X/n) · (1 - R₂) · q, where R₂ = 𝟙[Rule of Two enforced].
+**Theorem 1 (Multi-Barrier Exfiltration Bound).** In an agent system with n tools where each event batch is authorized a token of at most k tools, the probability that an adversary successfully exfiltrates sensitive data through a single batch is bounded by the product of five independent factors — each corresponding to a distinct architectural barrier that the attacker must simultaneously bypass:
+
+Pr[Exfil(b)] ≤ p · (kn_R/n) · (kn_X/n) · (1 - R₂) · q
+
+where p is the prompt injection success rate, kn_R/n and kn_X/n are the probabilities that the batch token contains a sensitive-read tool and an external-send tool respectively, R₂ ∈ {0,1} indicates whether the Rule of Two is enforced (R₂ = 1 zeroes the entire bound), and q is the cross-batch taint evasion probability.
 
 **Proof.**
 
@@ -92,9 +96,11 @@ Pr[Exfil(b)]
 
 ## 3. Theorem 2: Session-Level Compound Bound
 
-**Theorem 2.** Let ε = p · α_R · α_X · (1-R₂) · q. Over B independent batches:
+**Theorem 2 (Session-Level Security Degradation).** Over a session of B independent batches, the probability that at least one batch is successfully exploited grows with B but remains bounded. Let ε = p · α_R · α_X · (1-R₂) · q be the per-batch bound from Theorem 1. Then:
 
 Pr[∃ b ∈ {1,...,B}: Exfil(b)] ≤ 1 - (1 - ε)^B
+
+Under ambient authority, by contrast, this probability converges to 1 as B → ∞ for any injection rate p > 0, making prolonged agent sessions inherently unsafe.
 
 **Proof.**
 
@@ -139,7 +145,9 @@ lim_{B→∞} [1 - (1-p)^B]
 
 ## 4. Theorem 3: Rule of Two Hard Guarantee
 
-**Theorem 3.** If R₂ = 1, then Pr[Exfil(b)] = 0.
+**Theorem 3 (Rule of Two: Zero-Probability Guarantee).** When the Rule of Two is enforced on a batch token — i.e., the token does not simultaneously grant tools for untrusted input, sensitive data access, and external transmission — the exfiltration probability drops to exactly zero, regardless of the adversary's injection success rate or taint evasion capability:
+
+Pr[Exfil(b)] = 0    when R₂ = 1
 
 **Proof.**
 
@@ -164,7 +172,9 @@ Pr[∃ b: Exfil(b)]
 
 ## 5. Theorem 4: CausalTaintTracker Monotonicity
 
-**Theorem 4.** ∀ 0 ≤ i ≤ j ≤ m: τ_i ≤ τ_j.
+**Theorem 4 (Causal Taint Irrevocability).** Once the CausalTaintTracker observes external data at any step within a batch, the taint level is permanently elevated for all subsequent steps — no tool execution can reduce it. This guarantees that within a single batch, the taint evasion probability is exactly zero (q_within = 0), and the only residual evasion risk q in Theorem 1 arises from cross-batch context contamination. Formally, the causal taint sequence is monotonically non-decreasing:
+
+∀ 0 ≤ i ≤ j ≤ m: τ_i ≤ τ_j
 
 **Proof.** For any k ∈ {1, ..., m}:
 
@@ -226,7 +236,9 @@ This holds ∀ k > j and ∀ t ∈ 𝒯_X (all external-action tools have max_ca
 
 ## 6. Theorem 5: Gate Determinism and Bound Integrity
 
-**Theorem 5.** G: 𝒜 × Token × TaintStore × Counter × ℝ≥₀ → {ALLOW, DENY} is deterministic and LLM-independent.
+**Theorem 5 (Bound Integrity: Adversary Cannot Weaken Structural Barriers).** The CapabilityGate function G is deterministic and LLM-independent. This ensures that the structural factors in Theorem 1's bound — the tool-visibility ratios α_R, α_X and the Rule of Two indicator R₂ — are determined solely by event metadata and system configuration, not by the LLM. An adversary who successfully injects the LLM can influence the injection rate p and taint evasion probability q, but cannot manipulate the architectural barriers α_R, α_X, or R₂. Formally:
+
+G: 𝒜 × Token × TaintStore × Counter × ℝ≥₀ → {ALLOW, DENY} is deterministic and LLM-independent.
 
 **Proof (Determinism).** G = Check₃ ∘ Check₂ ∘ Check₁. Each Checkᵢ is a composition of:
 
