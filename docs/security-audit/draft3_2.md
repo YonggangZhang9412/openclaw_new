@@ -6,7 +6,7 @@ Classical access control — from Multics rings to OAuth scopes — rests on an 
 
 > **The Deterministic Intent Assumption.** The executing principal's intent is determined by the authenticated identity and is not modifiable by the data the principal processes.
 
-When Alice logs into a banking system, her request to transfer $500 reflects Alice's intent. The data she views does not alter that intent. AI agents violate this assumption categorically: an LLM-powered agent's "intent" emerges from its system prompt, conversation history, and the data it processes in real time. The same architecture that enables helpful email summarization enables a crafted email to redirect subsequent actions.
+When Alice logs into a banking system, her request to transfer \$500 reflects Alice's intent. The data she views does not alter that intent. AI agents violate this assumption categorically: an LLM-powered agent's "intent" emerges from its system prompt, conversation history, and the data it processes in real time. The same architecture that enables helpful email summarization enables a crafted email to redirect subsequent actions.
 
 ### 2.2 The data-instruction conflation and the SQL injection parallel
 

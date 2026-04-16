@@ -14,7 +14,7 @@ Autonomous AI agents violate a foundational assumption of classical access contr
 
 ### 1.1 The agentic turn
 
-Artificial intelligence is undergoing an "agentic turn"¹ — a shift from passive query-response systems to autonomous agents that perceive environments, form plans, and execute multi-step actions. Unlike chatbots, agentic systems can read email, modify files, execute code, send messages, and interact with financial systems without per-action human approval. By early 2026, open-source agent frameworks had achieved explosive adoption: OpenClaw accumulated over 145,000 GitHub stars in six weeks², and the agent economy was projected to exceed $65 billion by 2028 (ref. 31).
+Artificial intelligence is undergoing an "agentic turn"¹ — a shift from passive query-response systems to autonomous agents that perceive environments, form plans, and execute multi-step actions. Unlike chatbots, agentic systems can read email, modify files, execute code, send messages, and interact with financial systems without per-action human approval. By early 2026, open-source agent frameworks had achieved explosive adoption: OpenClaw accumulated over 145,000 GitHub stars in six weeks², and the agent economy was projected to exceed \$65 billion by 2028 (ref. 31).
 
 ### 1.2 Empirical evidence: the OpenClaw crisis
 
@@ -30,7 +30,7 @@ In early 2026, OpenClaw — which grants agents persistent access to email, cale
 
 ### 1.3 A field-wide structural vulnerability
 
-The OpenClaw crisis is not an indictment of a single product. OpenClaw implements external content wrapping with randomized boundary markers, 14 prompt injection detection patterns, Docker sandboxing, multi-layer tool policy pipelines, and a security audit framework — representing the state of the art. The 2025 EchoLeak attack (CVE-2025-32711) against Microsoft Copilot — where crafted email content triggered autonomous data exfiltration¹⁰ — demonstrated the same vulnerability in commercial systems. Autonomous AI trading agents triggered over $45 million in security incidents⁵. OWASP has ranked prompt injection as the #1 LLM vulnerability since 2024⁶.
+The OpenClaw crisis is not an indictment of a single product. OpenClaw implements external content wrapping with randomized boundary markers, 14 prompt injection detection patterns, Docker sandboxing, multi-layer tool policy pipelines, and a security audit framework — representing the state of the art. The 2025 EchoLeak attack (CVE-2025-32711) against Microsoft Copilot — where crafted email content triggered autonomous data exfiltration¹⁰ — demonstrated the same vulnerability in commercial systems. Autonomous AI trading agents triggered over \$45 million in security incidents⁵. OWASP has ranked prompt injection as the #1 LLM vulnerability since 2024⁶.
 
 The vulnerability is architectural, not implementational. Every major agent framework shares the same foundational model: **ambient authority**, where the agent inherits the operator's full permissions for the duration of a session.
 

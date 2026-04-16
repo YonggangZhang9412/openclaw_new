@@ -16,7 +16,7 @@ The class of architectures providing event provenance, cascade enforcement, batc
 2. OpenClaw Project. Security advisories GHSA-2026-25253 (RCE), GHSA-2026-25254, GHSA-2026-25255. GitHub (2026).
 3. Sangfor Technologies. OpenClaw Security Risks. Report at https://www.sangfor.com/blog/cybersecurity/openclaw-ai-agent-security-risks-2026 (accessed 10 April 2026).
 4. Censys. Exposed OpenClaw Instances Analysis. Report at https://censys.io (accessed 10 April 2026).
-5. KuCoin Research. AI Trading Agent Vulnerability: $45M Crypto Security Breach. Report at https://www.kucoin.com/blog (accessed 10 April 2026).
+5. KuCoin Research. AI Trading Agent Vulnerability: \$45M Crypto Security Breach. Report at https://www.kucoin.com/blog (accessed 10 April 2026).
 6. OWASP. Top 10 for Large Language Model Applications v2.0. https://owasp.org (2025).
 7. Nature Editorial. Let 2026 be the year the world comes together for AI safety. *Nature* **637**, 8–9 (2025).
 8. Nature Machine Intelligence Editorial. Multi-agent AI systems need transparency. *Nat. Mach. Intell.* **8**, 1–2 (2026).

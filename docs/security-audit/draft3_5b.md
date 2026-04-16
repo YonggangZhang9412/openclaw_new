@@ -25,15 +25,15 @@ For each event batch, the CapabilityIssuer performs:
 1. **Trust classification** → determines base tool set
 2. **Tool grant selection** → `EVENT_TOOL_GRANTS[event_type]` intersected with trust-level restrictions
 3. **Path inference** → `event.payload["path"]` resolved to absolute path, parent directory granted via glob
-4. **Rule-of-Two evaluation** → if granted tools span $\mathcal{T}_U$ $\cap$ $\mathcal{T}_R$ $\cap$ $\mathcal{T}_X$ simultaneously, external-action tools removed
+4. **Rule-of-Two evaluation** → if granted tools span $\mathcal{T}_U \cap \mathcal{T}_R \cap \mathcal{T}_X$ simultaneously, external-action tools removed
 5. **Token construction** → frozen CapabilityToken with `granted_tools`, `denied_tools`, `granted_paths`, `ttl` (300s), Rule-of-Two flags
 
 ### CapabilityGate: three-check verification
 
 For each tool call `(t, args)`:
-- **Check 1 (Token)**: t_now > τ.issued_at + τ.ttl → DENY; t $\notin$ τ.granted_tools → DENY; t ∈ τ.denied_tools → DENY
-- **Check 2 (Taint)**: for each param value, query TaintStore (SHA-256 fingerprint → dict lookup → substring match → boundary marker detection); if taint > policy.max_taint → DENY
-- **Check 3 (Structural)**: path $\notin$ granted_paths → DENY; call_count $\geq$ max_per_round → DENY; causal Rule of Two violated → DENY
+- **Check 1 (Token)**: $t_{\text{now}} > \tau.\text{issued\_at} + \tau.\text{ttl}$ → DENY; $t \notin \tau.\text{granted\_tools}$ → DENY; $t \in \tau.\text{denied\_tools}$ → DENY
+- **Check 2 (Taint)**: for each param value, query TaintStore (SHA-256 fingerprint → dict lookup → substring match → boundary marker detection); if $\text{taint} > \text{policy.max\_taint}$ → DENY
+- **Check 3 (Structural)**: $\text{path} \notin \text{granted\_paths}$ → DENY; $\text{call\_count} \geq \text{max\_per\_round}$ → DENY; causal Rule of Two violated → DENY
 
 ### External content wrapping
 

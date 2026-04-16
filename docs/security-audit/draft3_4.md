@@ -12,18 +12,18 @@ $$\Pr[\text{Exfil}(b)] \leq p \cdot \min\!\left(\frac{kn_R}{n},\, \frac{kn_X}{n}
 
 where each factor corresponds to a distinct architectural barrier that the attacker must overcome: p (injection success), $kn_R/n$ and $kn_X/n$ (tool visibility — union bounds on the probability of sensitive-read and external-send tools being granted in the token; these arise from the same token draw and are not probabilistically independent, but represent architecturally distinct constraints), $R_2$ (Rule of Two: zeroes the bound when enforced), q (cross-batch taint evasion). Full proof in Supplementary Notes, Section 2.
 
-**Theorem 2 (Session-Level Bound).** Over B batches: $\Pr[\exists b: \text{Exfil}(b)]$ $\leq$ $1 - (1-\varepsilon)^B$ where $\varepsilon$ is the per-batch bound. Under ambient authority: $\Pr[\exists b: \text{Exfil}(b)]$ $\geq$ $1-(1-p)^B$ → 1 as $B \to \infty$.
+**Theorem 2 (Session-Level Bound).** Over $B$ batches: $\Pr[\exists\, b : \text{Exfil}(b)] \leq 1 - (1-\varepsilon)^B$ where $\varepsilon$ is the per-batch bound. Under ambient authority: $\Pr[\exists\, b : \text{Exfil}(b)] \geq 1-(1-p)^B \to 1$ as $B \to \infty$.
 
-**Theorem 3 (Rule of Two: Zero-Probability Guarantee).** When $R_2$ = 1: $\Pr[\text{Exfil}(b)]$ = 0, regardless of p or q.
+**Theorem 3 (Rule of Two: Zero-Probability Guarantee).** When $R_2 = 1$: $\Pr[\text{Exfil}(b)] = 0$, regardless of $p$ or $q$.
 
-**Theorem 4 (Causal Taint Irrevocability).** The causal taint sequence is monotonically non-decreasing ($\tau_i \leq \tau_j$ for i $\leq$ j). Once EXTERNAL data is observed, within-batch taint evasion is exactly zero ($q_{\text{within}}$ = 0).
+**Theorem 4 (Causal Taint Irrevocability).** The causal taint sequence is monotonically non-decreasing ($\tau_i \leq \tau_j$ for i $\leq$ j). Once EXTERNAL data is observed, within-batch taint evasion is exactly zero ($q_{\text{within}} = 0$).
 
 **Theorem 5 (Bound Integrity).** The CapabilityGate is deterministic and LLM-independent. The adversary can influence p and q but cannot manipulate $\alpha_R$, $\alpha_X$, or $R_2$.
 
 **Remark (Conservative bound).** Theorem 1 quantifies only the CapabilityGate's contribution. The following additional security layers are present in the system but not included in the bound:
 - EventInjectionGate: per-source rate limiting (10-200 events/s), payload size cap (16-131KB), cascade depth hard limit (20), event type whitelist
 - Path scoping: tool operations restricted to `granted_paths` globs derived from event payload
-- Trust-level tool restriction: REMOTE_OPEN events have $\alpha_X$ = 0 (Section 3.3), yielding $\Pr[\text{Exfil}]$ = 0 independent of the bound's other factors
+- Trust-level tool restriction: REMOTE_OPEN events have $\alpha_X = 0$ (Section 3.3), yielding $\Pr[\text{Exfil}] = 0$ independent of the bound's other factors
 - Context compaction: semantic compression of long session histories, reducing cross-batch contamination surface
 
 The actual system is strictly safer than the bound suggests.
@@ -34,7 +34,7 @@ Parameters: n = 55, k = 5, n_R = 8, n_X = 6, p = 0.5, q = 0.1, B = 288.
 
 | Scenario | $\Pr[\text{Exfil}(b)]$ | Session $\Pr[\exists b: \text{Exfil}(b)]$ |
 |----------|-------------|--------------------------|
-| Ambient authority | $\geq$ 0.5 | ≈ 1.0 |
+| Ambient authority | $\geq$ 0.5 | $\approx 1.0$ |
 | Event-scoped, $R_2$ = 0 | $\leq$ 0.027 | $\leq$ 0.9997 (independence) or $\leq$ min(1, 288·0.027) (union bound) |
 | Event-scoped, $R_2$ = 1 | = 0 | = 0 |
 | REMOTE_OPEN events | = 0 | = 0 |
@@ -71,7 +71,7 @@ Prompt injection creates a historically unprecedented asymmetry. Attack cost: co
 
 ### 5.3 Enabling high-stakes deployment
 
-Today, responsible organizations restrict AI agents to low-stakes tasks precisely because the ambient authority model cannot guarantee safety for consequential actions. Our architecture changes this calculus. A medical AI agent operating under trust-level-specific token issuance cannot exfiltrate patient records through untrusted sources ($\alpha_X$ = 0 for REMOTE_OPEN). A financial agent cannot be tricked into unauthorized transfers because taint tracking prevents externally-sourced account numbers from being used as transfer parameters. A legal AI cannot leak privileged communications because the capability token for processing incoming correspondence does not include tools for outbound communication. These are structural properties verifiable through code inspection, not claims dependent on LLM compliance.
+Today, responsible organizations restrict AI agents to low-stakes tasks precisely because the ambient authority model cannot guarantee safety for consequential actions. Our architecture changes this calculus. A medical AI agent operating under trust-level-specific token issuance cannot exfiltrate patient records through untrusted sources ($\alpha_X = 0$ for REMOTE_OPEN). A financial agent cannot be tricked into unauthorized transfers because taint tracking prevents externally-sourced account numbers from being used as transfer parameters. A legal AI cannot leak privileged communications because the capability token for processing incoming correspondence does not include tools for outbound communication. These are structural properties verifiable through code inspection, not claims dependent on LLM compliance.
 
 ### 5.4 Enabling regulation
 
