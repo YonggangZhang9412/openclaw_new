@@ -1,0 +1,503 @@
+%Version 3.1 December 2024
+% See section 11 of the User Manual for version history
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                                                                 %%
+%% Please do not use \input{...} to include other tex files.       %%
+%% Submit your LaTeX manuscript as one .tex document.              %%
+%%                                                                 %%
+%% All additional figures and files should be attached             %%
+%% separately and not embedded in the \TeX\ document itself.       %%
+%%                                                                 %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%\documentclass[referee,sn-basic]{sn-jnl}% referee option is meant for double line spacing
+
+%%=======================================================%%
+%% to print line numbers in the margin use lineno option %%
+%%=======================================================%%
+
+%%\documentclass[lineno,pdflatex,sn-basic]{sn-jnl}% Basic Springer Nature Reference Style/Chemistry Reference Style
+
+%%=========================================================================================%%
+%% the documentclass is set to pdflatex as default. You can delete it if not appropriate.  %%
+%%=========================================================================================%%
+
+%%\documentclass[sn-basic]{sn-jnl}% Basic Springer Nature Reference Style/Chemistry Reference Style
+
+%%Note: the following reference styles support Namedate and Numbered referencing. By default the style follows the most common style. To switch between the options you can add or remove Numbered in the optional parenthesis. 
+%%The option is available for: sn-basic.bst, sn-chicago.bst%  
+ 
+\documentclass[pdflatex,sn-nature]{sn-jnl}% Style for submissions to Nature Portfolio journals
+%%\documentclass[pdflatex,sn-basic]{sn-jnl}% Basic Springer Nature Reference Style/Chemistry Reference Style
+% \documentclass[pdflatex,sn-mathphys-num]{sn-jnl}% Math and Physical Sciences Numbered Reference Style
+%%\documentclass[pdflatex,sn-mathphys-ay]{sn-jnl}% Math and Physical Sciences Author Year Reference Style
+%%\documentclass[pdflatex,sn-aps]{sn-jnl}% American Physical Society (APS) Reference Style
+%%\documentclass[pdflatex,sn-vancouver-num]{sn-jnl}% Vancouver Numbered Reference Style
+%%\documentclass[pdflatex,sn-vancouver-ay]{sn-jnl}% Vancouver Author Year Reference Style
+%%\documentclass[pdflatex,sn-apa]{sn-jnl}% APA Reference Style
+%%\documentclass[pdflatex,sn-chicago]{sn-jnl}% Chicago-based Humanities Reference Style
+
+%%%% Standard Packages
+%%<additional latex packages if required can be included here>
+
+\usepackage{graphicx}%
+\usepackage{multirow}%
+\usepackage{amsmath,amssymb,amsfonts}%
+\usepackage{amsthm}%
+\usepackage{mathrsfs}%
+\usepackage[title]{appendix}%
+\usepackage{xcolor}%
+\usepackage{textcomp}%
+\usepackage{manyfoot}%
+\usepackage{booktabs}%
+\usepackage{algorithm}%
+\usepackage{algorithmicx}%
+\usepackage{algpseudocode}%
+\usepackage{listings}%
+%%%%
+\usepackage{booktabs}
+\usepackage{makecell}
+
+%%%%%=============================================================================%%%%
+%%%%  Remarks: This template is provided to aid authors with the preparation
+%%%%  of original research articles intended for submission to journals published 
+%%%%  by Springer Nature. The guidance has been prepared in partnership with 
+%%%%  production teams to conform to Springer Nature technical requirements. 
+%%%%  Editorial and presentation requirements differ among journal portfolios and 
+%%%%  research disciplines. You may find sections in this template are irrelevant 
+%%%%  to your work and are empowered to omit any such section if allowed by the 
+%%%%  journal you intend to submit to. The submission guidelines and policies 
+%%%%  of the journal take precedence. A detailed User Manual is available in the 
+%%%%  template package for technical guidance.
+%%%%%=============================================================================%%%%
+
+%% as per the requirement new theorem styles can be included as shown below
+\theoremstyle{thmstyleone}%
+\newtheorem{theorem}{Theorem}%  meant for continuous numbers
+%%\newtheorem{theorem}{Theorem}[section]% meant for sectionwise numbers
+%% optional argument [theorem] produces theorem numbering sequence instead of independent numbers for Proposition
+\newtheorem{proposition}[theorem]{Proposition}% 
+%%\newtheorem{proposition}{Proposition}% to get separate numbers for theorem and proposition etc.
+
+\theoremstyle{thmstyletwo}%
+\newtheorem{example}{Example}%
+\newtheorem{remark}{Remark}%
+
+\theoremstyle{thmstylethree}%
+\newtheorem{definition}{Definition}%
+
+\raggedbottom
+%%\unnumbered% uncomment this for unnumbered level heads
+
+\begin{document}
+
+\begin{document}
+
+\title[Article Title]{The Agent Authority Problem: Why Autonomous AI Demands Deterministic Security}
+
+\author[1]{\fnm{Zhenyuan} \sur{Zhang}}\email{iauthor@gmail.com}
+\equalcont{These authors contributed equally to this work.}
+\author[1]{\fnm{Zhiqin} \sur{Yang}}\email{iiauthor@gmail.com}
+\equalcont{These authors contributed equally to this work.}
+\author[1]{\fnm{Yonggang} \sur{Zhang}}\email{zhangyg@ust.hk}
+\equalcont{These authors contributed equally to this work.}
+
+\author[1]{\fnm{Xianzhang} \sur{Jia}}\email{iauthor@gmail.com}
+\author[1]{\fnm{Wei} \sur{Xue}}\email{iauthor@gmail.com}
+
+\author*[2]{\fnm{Jun} \sur{Song}}\email{iiauthor@gmail.com}
+\author*[1]{\fnm{Yike} \sur{Guo}}\email{yikeguo@ust.hk}
+
+\affil[1]{\orgname{Hong Kong University of Science and Technology}, \orgaddress{\city{Hong Kong}}}
+\affil[2]{\orgname{Hong Kong Baptist University}, \orgaddress{\city{Hong Kong}}}
+
+\abstract{Autonomous AI agents violate a foundational assumption of classical access control: that an executing principal's intent is deterministic and non-manipulable. We formalize this as the \emph{Agent Authority Problem}: under the ambient authority model, no security mechanism can simultaneously permit autonomous processing of untrusted data, maintain privileged resource access, and provide safety guarantees independent of LLM instruction-following fidelity. To resolve this problem, we present a dual-gate event-driven capability architecture: an EventInjectionGate constraining which events enter the system (rate limiting, cascade depth, payload bounds), and a CapabilityGate constraining what actions the LLM may take (token scoping, taint tracking, Rule of Two). We prove that attack success probability is bounded by $p \cdot \min(\alpha_R, \alpha_X) \cdot (1-R_2) \cdot q$, where each factor corresponds to a distinct architectural barrier, and show that for untrusted event sources, the bound tightens to zero through trust-level-specific tool restriction.}
+
+\keywords{Agentic System, Trustworthy Agent, Capability Security, Prompt Injection}
+
+\maketitle
+
+%% ================================================================
+%%  Section 1
+%% ================================================================
+\section{The Emerging Crisis}\label{sec:crisis}
+
+\subsection{The agentic turn}\label{subsec:agentic-turn}
+
+Artificial intelligence is undergoing an ``agentic turn''~\cite{gabriel2025ethics}---a shift from passive query-response systems to autonomous agents that perceive environments, form plans, and execute multi-step actions. Unlike chatbots, agentic systems can read email, modify files, execute code, send messages, and interact with financial systems without per-action human approval. By early 2026, open-source agent frameworks had achieved explosive adoption: OpenClaw accumulated over 145,000 GitHub stars in six weeks~\cite{openclaw2026advisories}, and the agent economy was projected to exceed \$65 billion by 2028~\cite{mam2025aiagents}.
+
+\subsection{Empirical evidence: the OpenClaw crisis}\label{subsec:openclaw}
+
+In early 2026, OpenClaw---which grants agents persistent access to email, calendar, filesystem, browser, and shell---became the site of the first comprehensive agent security crisis. The crisis was not a single vulnerability but a complete hazard topology (Fig.~\ref{fig:hazard}):
+
+\begin{itemize}
+  \item \textbf{Adversarial exploitation.} Approximately 12\% of skills in ClawHub, OpenClaw's community marketplace, were malicious---disguised as legitimate tools while installing keyloggers or exfiltrating credentials~\cite{sangfor2026openclaw}. CVE-2026-25253 (CVSS 8.8) enabled one-click remote code execution through cross-site WebSocket hijacking~\cite{mitre2026cve25253}. Censys identified 21,639 publicly exposed instances~\cite{censys2026openclaw}.
+  \item \textbf{Non-adversarial cascading failures.} Users reported persistent hallucination loops---where an agent's erroneous belief, reinforced through accumulated context, propagated across subsequent execution cycles without attacker involvement~\cite{openclaw2026advisories}.
+  \item \textbf{Intent drift.} Beyond approximately 100 messages, instruction-following capability degraded significantly~\cite{openclaw2026advisories}.
+  \item \textbf{Over-authorization.} One user's agent inadvertently initiated a dispute with an insurance company; another sent over 500 unsolicited iMessages~\cite{openclaw2026advisories}. These are not bugs but predictable consequences of granting ambient authority to a system whose ``intent'' is stochastic.
+\end{itemize}
+
+\subsection{A field-wide structural vulnerability}\label{subsec:fieldwide}
+
+The OpenClaw crisis is not an indictment of a single product. OpenClaw implements external content wrapping with randomized boundary markers, 14 prompt injection detection patterns, Docker sandboxing, multi-layer tool policy pipelines, and a security audit framework---representing the state of the art. The 2025 EchoLeak attack (CVE-2025-32711) against Microsoft Copilot---where crafted email content triggered autonomous data exfiltration~\cite{mitre2025cve32711}---demonstrated the same vulnerability in commercial systems. Autonomous AI trading agents triggered over \$45 million in security incidents~\cite{kucoin2026aitrading}. OWASP has ranked prompt injection as the top LLM vulnerability since 2024~\cite{owasp2025llmtop10}.
+
+The vulnerability is architectural, not implementational. Every major agent framework shares the same foundational model: \emph{ambient authority}, where the agent inherits the operator's full permissions for the duration of a session.
+
+% Placeholder for Figure 1
+\begin{figure}[ht]
+\centering
+% \includegraphics[width=\textwidth]{fig1_hazard_topology.pdf}
+\caption{\textbf{(a)}~Hazard topology of the OpenClaw crisis: adversarial exploitation, non-adversarial cascading failure, intent drift, and over-authorization as four manifestations of the Agent Authority Problem. \textbf{(b)}~Timeline of agent security incidents 2024--2026 showing escalating real-world impact.}
+\label{fig:hazard}
+\end{figure}
+
+%% ================================================================
+%%  Section 2
+%% ================================================================
+\section{The Agent Authority Problem}\label{sec:aap}
+
+\subsection{The deterministic intent assumption}\label{subsec:intent}
+
+Classical access control---from Multics rings to OAuth scopes---rests on an implicit assumption:
+
+\begin{quote}
+\textbf{The Deterministic Intent Assumption.} The executing principal's intent is determined by the authenticated identity and is not modifiable by the data the principal processes.
+\end{quote}
+
+When Alice logs into a banking system, her request to transfer \$500 reflects Alice's intent. The data she views does not alter that intent. AI agents violate this assumption categorically: an LLM-powered agent's ``intent'' emerges from its system prompt, conversation history, and the data it processes in real time. The same architecture that enables helpful email summarization enables a crafted email to redirect subsequent actions.
+
+\subsection{The data-instruction conflation and the SQL injection parallel}\label{subsec:sql}
+
+This vulnerability exists because LLMs process data and instructions through the same token stream, with no intrinsic boundary between ``data to analyze'' and ``instruction to follow.''
+
+The parallel to SQL injection is historically illuminating. SQL injection arose because database interfaces concatenated user data and SQL commands into the same string. For over a decade, the response was defensive programming: sanitization, escaping, pattern detection. Each defense was incrementally bypassed. It took roughly 15 years---from the first documented SQL injection in 1998 to widespread adoption of parameterized queries---for the field to recognize that the vulnerability was architectural: the conflation of data and code. The solution was structural separation ensuring user input is \emph{never interpreted as SQL commands}.
+
+Prompt injection stands at the beginning of the same arc. Current defenses---boundary markers, detection patterns, safety instructions---recapitulate the ``sanitization era.'' \textbf{This paper proposes the ``parameterized query moment'' for agent security}: an architectural separation where the security enforcement layer \emph{never interprets natural language}, and the LLM \emph{never makes security decisions}.
+
+The consequences of delayed transition are graver. SQL injection corrupted databases; prompt injection of an autonomous agent triggers real-world actions across every connected system. And unlike SQL injection, which required programming knowledge, prompt injection requires only natural language---lowering the attack barrier to anyone who can compose a sentence.
+
+\subsection{The structural argument}\label{subsec:structural}
+
+We state the Agent Authority Problem precisely with formal treatment in Supplementary Note~1.
+
+\begin{quote}
+\textbf{The Agent Authority Problem.} Under the ambient authority model---where an agent inherits a static set of permissions for the duration of a session---no security mechanism can simultaneously satisfy:
+\begin{description}
+  \item[(C1) Autonomous data processing:] The agent processes data from untrusted external sources without per-item human approval.
+  \item[(C2) Privileged resource access:] The agent holds access to sensitive resources (filesystem, credentials, communication channels).
+  \item[(C3) LLM-independent safety:] Security guarantees do not depend on the LLM's ability to perfectly resolve the data-instruction ambiguity inherent in natural language.
+\end{description}
+\end{quote}
+
+\textbf{Argument.} Under ambient authority, the agent holds privileges~(C2) throughout the session. When processing untrusted data~(C1), adversarial instructions enter the LLM's processing context. If data and instructions share a processing channel---as they do in all current LLM architectures---the LLM faces an inherently ambiguous classification task. To prevent the LLM from acting on adversarial instructions without reducing its privileges, the system must rely on the LLM's heuristic judgment---violating~C3.
+
+\textbf{On scope.} The Agent Authority Problem is conditional on the dominant architecture of LLM-based agents---systems where data and instructions share a processing channel. This includes all current and foreseeable architectures where the agent must \emph{reason about} external data. A hypothetical architecture with perfect channel separation would escape the impossibility but would itself constitute a form of the solution we propose. CaMeL~\cite{debenedetti2025camel} takes a step in this direction but still requires its Quarantined LLM to process untrusted data \emph{and} generate tool-call decisions within the same component.
+
+\subsection{Why incremental defenses are insufficient}\label{subsec:defenses}
+
+\begin{table}[ht]
+\caption{Why existing defenses fail to provide structural security guarantees.}\label{tab:defenses}
+\begin{tabular}{@{}p{4cm}p{8cm}@{}}
+\toprule
+Defense & Structural limitation \\
+\midrule
+Prompt injection detection & Cannot enumerate all adversarial encodings; fundamentally incomplete \\
+External content boundary markers & Relies on LLM to respect labels (violates C3) \\
+Static tool allow/deny lists & Remains unchanged throughout session; injected agent retains all allowed tools \\
+Execution approval gates & Covers only shell execution; high-level actions bypass approval \\
+Docker sandboxing & Constrains \emph{how} code executes, not \emph{what} the LLM decides to execute \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{From perimeter defense to context-scoped authority}\label{subsec:perimeter}
+
+The Agent Authority Problem parallels the transition from perimeter-based network security to zero trust. But the analogy is imperfect: in network zero trust, the principal's identity remains the basis for authorization. For AI agents, identity is insufficient---\textbf{the agent's identity never changes, but its effective intent changes with every piece of data it processes.} Authorization must be bound not to \emph{who} the agent is, but to \emph{what event it is currently processing}.
+
+%% ================================================================
+%%  Section 3
+%% ================================================================
+\section{The Event-Driven Capability Architecture}\label{sec:arch}
+
+The Agent Authority Problem shows that C1, C2, and C3 cannot coexist under ambient authority. We replace ambient authority with \textbf{event-scoped capability authority}---not solving the impossibility within the old model, but replacing the model itself, analogous to how parameterized queries replaced string concatenation for SQL security.
+
+Under event-scoped capability authority, all three conditions are simultaneously satisfied: C1 preserved (agent processes untrusted data autonomously), C2 preserved (agent accesses sensitive resources, but scoped per event batch), C3 satisfied (CapabilityGate is deterministic code with zero LLM dependency).
+
+\subsection{Design principles}\label{subsec:principles}
+
+\begin{description}
+  \item[Principle 1 (Heterogeneous enforcement).] The security layer must operate through a channel immune to natural language manipulation: deterministic code, not LLM judgment.
+  \item[Principle 2 (Context-scoped authority).] Authority must be scoped to each processing context---not granted as a session-wide ambient capability.
+  \item[Principle 3 (Structural chain interruption).] Rather than detecting all adversarial inputs, structurally prevent completion of attack chains regardless of injection success.
+\end{description}
+
+\subsection{Dual-gate architecture on a unified EventBus}\label{subsec:dualgate}
+
+These principles impose requirements on the underlying architecture that necessitate both an event-driven model and a \textbf{dual-gate security structure} (Fig.~\ref{fig:arch}).
+
+\paragraph{EventBus.} All triggers---user messages, timers, file changes, cron jobs, network events---are normalized into typed Event objects (frozen dataclasses with immutable \texttt{source}, \texttt{origin\_chain}, \texttt{cascade\_depth}). This unified event model provides four structural properties unachievable in request-response architectures:
+
+\begin{description}
+  \item[Requirement A (Event provenance).] Each event carries immutable metadata identifying its origin and trust level, set by the framework---not by the caller. A request-response model can authenticate \emph{caller identity} (via JWT, mTLS) but cannot represent \emph{event provenance}---what kind of trigger initiated the processing context.
+  \item[Requirement B (Cascade depth enforcement).] The framework auto-increments \texttt{cascade\_depth} when consumers inject child events; a hard limit of~20 prevents infinite loops. In request-response models, this requires manual propagation by each handler---a single non-compliant handler breaks the guarantee.
+  \item[Requirement C (Batch atomicity).] Correlated events are processed as atomic batches, enabling the Rule of Two (Section~\ref{subsec:capgate}) to evaluate across the entire batch.
+  \item[Requirement D (Composable monitoring).] Eighteen independent side consumers---security scanning, capability gate auditing, error aggregation, delivery monitoring---subscribe to the event stream in parallel without mutual coupling.
+\end{description}
+
+\paragraph{Gate 1: EventInjectionGate (producer-side).} Before an event enters the EventBus, the EventInjectionGate enforces per-source security policies:
+\begin{itemize}
+  \item \textbf{Rate limiting}: sliding 1-second window per source (ADMIN: 200/s, CLI: 100/s, MOBILE: 10/s)
+  \item \textbf{Payload size cap}: 16\,KB (MOBILE) to 131\,KB (ADMIN) per event
+  \item \textbf{Cascade depth enforcement}: enforces Requirement~B at the point of event injection, rejecting events that exceed the depth limit
+  \item \textbf{Event type whitelist}: external sources may only inject event types permitted by their policy
+  \item \textbf{CRITICAL priority control}: requires an unforgeable EscalationToken (UUID-based, time-bounded, use-limited)
+\end{itemize}
+
+The InjectionGate operates entirely before the LLM is invoked. Its decisions depend on event metadata and source identity---not on content processed by the LLM. This constitutes a security layer that is orthogonal to and independent of the CapabilityGate.
+
+\paragraph{Gate 2: CapabilityGate (consumer-side).} After the EventConsumer invokes the LLM and receives a tool-call proposal, the CapabilityGate performs three-layer verification (Section~\ref{subsec:capgate}).
+
+\paragraph{Dual-gate security implication.} An attacker must bypass both gates to complete an attack: first, the event must pass the InjectionGate (rate, size, type, depth constraints); then, the LLM's tool call must pass the CapabilityGate (token, taint, Rule of Two). The Theorem~\ref{thm:main} probability bound quantifies only the CapabilityGate's contribution; the InjectionGate provides additional unquantified barriers, making the bound conservative.
+
+% Placeholder for Figure 2
+\begin{figure}[ht]
+\centering
+% \includegraphics[width=\textwidth]{fig2_dual_gate.pdf}
+\caption{Dual-gate event-driven capability architecture. \textbf{(a)}~All triggers normalized into typed Events flowing through a unified EventBus. \textbf{(b)}~Security pipeline: Gate~1 (EventInjectionGate) $\to$ EventFilter $\to$ PriorityQueue $\to$ EventConsumer issues JIT CapabilityToken $\to$ LLM invocation $\to$ Gate~2 (CapabilityGate). \textbf{(c)}~Eighteen independent side consumers operate in parallel.}
+\label{fig:arch}
+\end{figure}
+
+\subsection{Trust-level-specific token issuance}\label{subsec:trust}
+
+The CapabilityIssuer classifies each event batch into one of three trust levels based on immutable event metadata, then issues a token with trust-appropriate tool grants (Table~\ref{tab:trust}).
+
+\begin{table}[ht]
+\caption{Trust-level classification and corresponding tool grant policies.}\label{tab:trust}
+\begin{tabular}{@{}llll@{}}
+\toprule
+Trust level & Criteria & Tool grant policy & Security consequence \\
+\midrule
+\textsc{Local\_Trusted} & \makecell[l]{Internal sources\\(timer, cron, file,\\process, network)} & \makecell[l]{Full tool set relevant\\to event type} & \makecell[l]{Standard Theorem~\ref{thm:main}\\bound applies} \\[6pt]
+\textsc{Remote\_Verified} & \makecell[l]{Authenticated device\\via HMAC challenge-\\response} & \makecell[l]{High-risk tools removed\\(\texttt{bash}, \texttt{daemon\_restart})} & \makecell[l]{$\alpha_R$, $\alpha_X$ reduced;\\tighter bound} \\[6pt]
+\textsc{Remote\_Open} & \makecell[l]{Unverified external\\source (custom webhook,\\unauthenticated WS)} & \makecell[l]{All external-action\\tools removed} & $\alpha_X = 0 \Rightarrow \Pr[\text{Exfil}] = 0$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{proposition}[Trust-Level Zero Guarantee]\label{prop:trust-zero}
+For \textsc{Remote\_Open} events, no external-action tool is granted ($\alpha_X=0$). Since exfiltration requires transmitting data externally, exfiltration is structurally impossible regardless of injection success rate, Rule of Two status, or taint evasion capability:
+\begin{equation}
+  \Pr[\text{Exfil} \mid \text{Remote\_Open}] \leq p \cdot \min(\alpha_R, 0) \cdot (1-R_2) \cdot q = 0.
+\end{equation}
+This guarantee is strictly stronger than Theorem~\ref{thm:r2} (Rule of Two), which requires $R_2 = 1$. The trust-level guarantee holds regardless of~$R_2$.
+\end{proposition}
+
+\subsection{Three-layer CapabilityGate}\label{subsec:capgate}
+
+\paragraph{Layer 1 (Token scoping).} Each event batch receives a JIT CapabilityToken---a frozen object specifying \texttt{granted\_tools} (frozenset of 2--5 tools), \texttt{granted\_paths} (filesystem globs derived from event payload), and \texttt{ttl}~(300\,s). The LLM sees only schemas for granted tools; ungranted tools are invisible.
+
+\paragraph{Layer 2 (Taint tracking: registration, propagation, verification).}
+
+Taint tracking operates in three stages:
+
+\emph{Registration.} When a tool returns external data (e.g., \texttt{web\_fetch} result), the framework---before the LLM sees the result---wraps the content in cryptographically tagged boundary markers (random 16-hex ID, $2^{64}$ marker space) and registers it in TaintStore with a SHA-256 fingerprint and taint level \textsc{External}. The wrapping process includes marker sanitization (preventing nested boundary spoofing) and Unicode normalization (preventing homoglyph attacks that bypass marker detection). Implementation details are described in Methods.
+
+\emph{Propagation.} CausalTaintTracker maintains a monotonically non-decreasing taint level per batch (Theorem~\ref{thm:taint}): once \textsc{External} data is observed, the batch is permanently marked as contaminated.
+
+\emph{Verification.} When the LLM proposes a tool call, CapabilityGate Check~2 queries TaintStore (content-level: fingerprint and substring matching) and CausalTaintTracker (context-level: round taint $\leq$ policy threshold). Both must pass for the call to proceed.
+
+\paragraph{Layer 3 (Rule of Two).} Exfiltration requires three simultaneous conditions: untrusted input~(U), sensitive data access~(S), and external action~(X). The Rule of Two constrains the token so at most two of $\{U, S, X\}$ hold per batch. By Theorem~\ref{thm:r2}, $\Pr[\text{Exfil}] = 0$ when enforced. The Rule of Two is enforced by default for all batches. The $R_2 = 0$ case in the quantitative analysis (Section~\ref{subsec:instantiation}) represents a conservative worst-case scenario---for example, if the tool classification $\mathcal{T}_U, \mathcal{T}_R, \mathcal{T}_X$ is incomplete and a tool is miscategorized.
+
+\subsection{Security properties}\label{subsec:properties}
+
+\begin{itemize}
+  \item \textbf{Determinism and prompt injection immunity.} The CapabilityGate function~$G$ is deterministic and LLM-independent (Theorem~\ref{thm:integrity}). An adversary who injects the LLM can influence \emph{which} tool call is proposed, but cannot influence \emph{how} $G$ evaluates it.
+  \item \textbf{Automatic privilege decay.} Tokens expire after 300 seconds. Each batch starts from zero authority.
+  \item \textbf{Fail-safe defaults.} TaintStore is fail-open (unknown sources allowed), but CausalTaintTracker is fail-safe (contamination irrevocable within batch). Unmapped event types receive the most restrictive token.
+  \item \textbf{Auditable decisions.} Every Gate decision includes a machine-readable reason (e.g., ``DENY: param `to' taint=EXTERNAL, policy requires $\leq$~USER'').
+\end{itemize}
+
+\subsection{Case analysis: the architecture against the OpenClaw hazard topology}\label{subsec:case}
+
+\paragraph{Malicious supply-chain skills (12\% of ClawHub compromised).} Under event-scoped capability authority, \textbf{token scoping} (Layer~1) restricts the skill's available tools to those relevant to its declared function, and \textbf{taint tracking} (Layer~2) registers all skill-introduced data as \textsc{External}, preventing its use as arguments to sensitive tools.
+
+\paragraph{CVE-2026-25253: cross-site WebSocket hijacking RCE.} Under our architecture, an unauthenticated WebSocket message is classified as \textsc{Remote\_Open}. By Proposition~\ref{prop:trust-zero}, $\alpha_X = 0$ and $\Pr[\text{Exfil}] = 0$---the RCE chain is structurally impossible because code execution tools are never granted for untrusted sources.
+
+\paragraph{Persistent hallucination loops and intent drift.} \textbf{Automatic privilege decay} ensures each batch receives a fresh token with 300-second TTL. Previous context errors do not accumulate privileges.
+
+\paragraph{Over-authorization (500 unsolicited iMessages).} \textbf{Context-scoped authority} (Principle~2) ensures that tools are granted per event type. A timer event does not warrant messaging tools. \textbf{EventInjectionGate rate limiting} provides an additional quantitative bound on event throughput.
+
+%% ================================================================
+%%  Section 4
+%% ================================================================
+\section{Quantitative Security Analysis}\label{sec:quant}
+
+\subsection{Threat model}\label{subsec:threat}
+
+We consider an adversary who can embed adversarial instructions in data sources processed by the agent (emails, web pages, API responses). The adversary's goal is data exfiltration: causing sensitive data to cross the system boundary. The adversary succeeds in prompt injection with probability~$p$ per batch (empirically $p \in [0.2, 0.8]$ for current LLMs~\cite{zhan2024injecagent,yi2023benchmarking}). We model token selection as worst-case uniform random (Assumption~1 in Supplementary Notes); the actual deterministic selection is strictly more restrictive.
+
+\subsection{Main results}\label{subsec:results}
+
+\begin{theorem}[Multi-Barrier Exfiltration Bound]\label{thm:main}
+In an agent system with $n$ tools where each event batch is authorized a token of at most $k$ tools, the probability that an adversary successfully exfiltrates sensitive data through a single batch is bounded by:
+\begin{equation}\label{eq:main}
+  \Pr[\text{Exfil}(b)] \leq p \cdot \min\!\left(\frac{kn_R}{n},\, \frac{kn_X}{n}\right) \cdot (1 - R_2) \cdot q
+\end{equation}
+where each factor corresponds to a distinct architectural barrier: $p$~(injection success), $kn_R/n$ and~$kn_X/n$ (tool visibility---union bounds on the probability of sensitive-read and external-send tools being granted; these arise from the same token draw and are not probabilistically independent, but represent architecturally distinct constraints), $R_2$~(Rule of Two: zeroes the bound when enforced), $q$~(cross-batch taint evasion). Full proof in Supplementary Notes.
+\end{theorem}
+
+\begin{theorem}[Session-Level Bound]\label{thm:session}
+Over $B$ batches: $\Pr[\exists\, b : \text{Exfil}(b)] \leq 1 - (1-\varepsilon)^B$ where $\varepsilon$ is the per-batch bound from Theorem~\ref{thm:main}. Under ambient authority: $\Pr[\exists\, b : \text{Exfil}(b)] \geq 1-(1-p)^B \to 1$ as $B \to \infty$.
+\end{theorem}
+
+\begin{theorem}[Rule of Two: Zero-Probability Guarantee]\label{thm:r2}
+When $R_2 = 1$: $\Pr[\text{Exfil}(b)] = 0$, regardless of $p$ or~$q$.
+\end{theorem}
+
+\begin{theorem}[Causal Taint Irrevocability]\label{thm:taint}
+The causal taint sequence is monotonically non-decreasing ($\tau_i \leq \tau_j$ for $i \leq j$). Once \textsc{External} data is observed, within-batch taint evasion is exactly zero ($q_{\text{within}} = 0$).
+\end{theorem}
+
+\begin{theorem}[Bound Integrity]\label{thm:integrity}
+The CapabilityGate is deterministic and LLM-independent. The adversary can influence $p$ and~$q$ but cannot manipulate $\alpha_R$, $\alpha_X$, or~$R_2$.
+\end{theorem}
+
+\begin{remark}[Conservative bound]
+Theorem~\ref{thm:main} quantifies only the CapabilityGate's contribution. Additional security layers not included in the bound:
+\begin{itemize}
+  \item EventInjectionGate: per-source rate limiting (10--200 events/s), payload size cap (16--131\,KB), cascade depth hard limit~(20), event type whitelist
+  \item Path scoping: tool operations restricted to \texttt{granted\_paths} globs derived from event payload
+  \item Trust-level tool restriction: \textsc{Remote\_Open} events have $\alpha_X = 0$ (Section~\ref{subsec:trust}), yielding $\Pr[\text{Exfil}] = 0$ independent of the bound's other factors
+  \item Context compaction: semantic compression of long session histories, reducing cross-batch contamination surface
+\end{itemize}
+The actual system is strictly safer than the bound suggests.
+\end{remark}
+
+\subsection{Concrete instantiation}\label{subsec:instantiation}
+
+Parameters: $n = 55$, $k = 5$, $n_R = 8$, $n_X = 6$, $p = 0.5$, $q = 0.1$, $B = 288$.
+
+\begin{table}[ht]
+\caption{Attack success probability under different security configurations.}\label{tab:scenario}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Scenario & $\Pr[\text{Exfil}(b)]$ & Session $\Pr[\exists\, b: \text{Exfil}(b)]$ \\
+\midrule
+Ambient authority & $\geq 0.5$ & $\approx 1.0$ \\[4pt]
+Event-scoped, $R_2 = 0$ & $\leq 0.027$ & $\leq 0.9997$ (independence) \\[4pt]
+Event-scoped, $R_2 = 1$ & $= 0$ & $= 0$ \\[4pt]
+\textsc{Remote\_Open} events & $= 0$ & $= 0$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Per-batch reduction ($R_2=0$): $0.5 / 0.027 \approx 18\times$. With $R_2=1$ or \textsc{Remote\_Open}: infinite (zero vs.\ non-zero).
+
+\subsection{Proposed empirical evaluation}\label{subsec:eval}
+
+Results will be reported in a companion paper.
+
+\begin{enumerate}
+  \item \textbf{Injection benchmarks.} Evaluate against InjecAgent~\cite{zhan2024injecagent}, CaMeL benchmark~\cite{debenedetti2025camel}, and BIPIA~\cite{yi2023benchmarking}: attack success rate under ambient vs.\ event-scoped authority, with barrier-by-barrier attribution.
+  \item \textbf{CaMeL comparison.} Head-to-head: security efficacy, computational overhead (our zero additional LLM calls vs.\ CaMeL's $2.7$--$2.8\times$ token overhead), false positive rate.
+  \item \textbf{Taint tracking precision/recall.} CausalTaintTracker false positive rate on realistic workloads; TaintStore false negative rate on paraphrased external data.
+  \item \textbf{Cross-batch contamination frequency.} Fraction of real-world sessions where session history from a prior batch materially influences LLM behavior in subsequent batches.
+  \item \textbf{Rule of Two coverage.} Systematic classification of AI Incident Database~\cite{aiid2026} and OWASP LLM Top~10~\cite{owasp2025llmtop10} incidents against the three Rule-of-Two conditions.
+\end{enumerate}
+
+%% ================================================================
+%%  Section 5
+%% ================================================================
+\section{Societal Implications}\label{sec:society}
+
+\subsection{The collapse of proxy trust}\label{subsec:proxy}
+
+Human society operates on networks of proxy trust---lawyers, financial advisors, physicians---secured by licensing, fiduciary duty, and legal liability developed over centuries. AI agents represent a fundamentally new class of proxy. Unlike human proxies, their faithfulness can be silently subverted through data channels without breaching authentication: a single crafted email can redirect an agent's subsequent actions while its identity credentials remain intact. When 145,000 users deployed OpenClaw agents with access to their email, calendar, and filesystem, they established proxy trust relationships with entities compromisable by a carefully worded paragraph.
+
+Our architecture addresses this through structural containment. The Rule of Two ensures that even if an agent's proxy faithfulness is fully compromised, exfiltration chains cannot complete. The trust-level system ensures that for the most untrusted sources, exfiltration is structurally impossible (Section~\ref{subsec:trust}). The proxy can fail; the system bounds the severity of exploitation.
+
+\subsection{The asymmetry of attack and defense}\label{subsec:asymmetry}
+
+Prompt injection creates a historically unprecedented asymmetry. Attack cost: composing a natural language sentence---no programming skill or exploit development required. Defense cost: restructuring the entire agent architecture from ambient authority to event-driven capability security. This asymmetry means that every agent deployed under the ambient authority model is structurally vulnerable from deployment, and the vulnerability cannot be patched without architectural change---unlike buffer overflows or SQL injection, which can often be fixed with localized patches.
+
+\subsection{Enabling high-stakes deployment}\label{subsec:highstakes}
+
+Today, responsible organizations restrict AI agents to low-stakes tasks precisely because the ambient authority model cannot guarantee safety for consequential actions. Our architecture changes this calculus. A medical AI agent operating under trust-level-specific token issuance cannot exfiltrate patient records through untrusted sources ($\alpha_X = 0$ for \textsc{Remote\_Open}). A financial agent cannot be tricked into unauthorized transfers because taint tracking prevents externally-sourced account numbers from being used as transfer parameters. A legal AI cannot leak privileged communications because the capability token for processing incoming correspondence does not include tools for outbound communication. These are structural properties verifiable through code inspection, not claims dependent on LLM compliance.
+
+\subsection{Enabling regulation}\label{subsec:regulation}
+
+Our architecture provides verifiable properties mapping to specific regulatory requirements:
+\begin{itemize}
+  \item \textbf{Auditable decision trails} (EU AI Act Article~12, Article~14): machine-readable logs of every Gate decision with deterministic justification.
+  \item \textbf{Deterministic security bounds} (Article~15: Robustness and Cybersecurity): the Rule-of-Two invariant and trust-level guarantees are verifiable through code inspection, not statistical testing.
+  \item \textbf{Per-event accountability} (US Executive Order Section~4.1): each agent action traced to a specific triggering event with its authorization chain.
+\end{itemize}
+
+\subsection{Adoption considerations}\label{subsec:adoption}
+
+\textbf{Developer experience.} The event-driven model requires restructuring from imperative request-response flows---a significant paradigm shift.
+
+\textbf{Migration path.} Incremental adoption is possible: existing agents can wrap their tool-calling layer with a CapabilityGate. Full EventBus integration provides the strongest guarantees.
+
+\textbf{Usability.} CausalTaintTracker's coarse granularity may block legitimate operations when external data is observed in the same batch as outbound communication. Configurable trust policies are necessary to balance security with productivity.
+
+%% ================================================================
+%%  Section 6
+%% ================================================================
+\section{Related Work}\label{sec:related}
+
+\subsection{Prompt injection defenses}\label{subsec:pi-defenses}
+
+Existing defenses fall into three categories. \textbf{Detection-based approaches} (pattern matching, classifier models, perplexity analysis~\cite{chhabra2025agentic}) face the fundamental limitation that adversarial encodings are open-ended. \textbf{Instruction hierarchy approaches}~\cite{wallace2024instruction} establish precedence among instruction sources but depend on LLM compliance under adversarial pressure. \textbf{Architectural separation approaches}, most notably CaMeL~\cite{debenedetti2025camel}, introduce Privileged/Quarantined LLM separation and data provenance tracking. Our work extends CaMeL in three ways: (1)~identifying EventBus as a structural prerequisite for capability security; (2)~dual-layer taint tracking (content-level + causal-level) versus CaMeL's single-layer provenance; (3)~closed-form theoretical bounds on attack probability (Theorem~\ref{thm:main}), complementing CaMeL's empirical evaluation (67\% task success with provable security on AgentDojo). Additionally, CaMeL's dual-LLM architecture incurs $2.7$--$2.8\times$ token overhead; our CapabilityGate is pure deterministic code requiring zero additional LLM calls.
+
+\subsection{Capability-based security}\label{subsec:caps}
+
+Capability-based security, originating with Dennis and Van Horn (1966)~\cite{dennis1966programming}, replaces ambient authority with explicit capability tokens. Our contribution adapts capability security to LLM agents, where capabilities must be scoped not to principal \emph{identity} but to \emph{operational context}---requiring the EventBus infrastructure of Section~\ref{subsec:dualgate}. The FINOS Agent Authority Least Privilege Framework~\cite{finos2026aigf} independently advocates similar principles at the governance level; our work provides the architectural implementation with formal guarantees.
+
+\subsection{Taint tracking and information flow control}\label{subsec:ifc}
+
+Taint tracking has a rich history (Perl's taint mode, DIFT~\cite{suh2004dift}). Costa and K\"opf~\cite{costa2025fides} present Fides, which tracks confidentiality and integrity labels forming a lattice with deterministic policy enforcement for AI agents. Our work differs in two respects: (1)~our dual-layer design provides complementary precision and recall, whereas Fides uses a single-layer label system; (2)~we provide quantitative probability bounds (Theorem~\ref{thm:main}), whereas Fides characterizes enforceable properties qualitatively. Siu et~al.~\cite{siu2025framework} propose a framework formalizing four security properties for LLM agents; our work provides the architectural implementation and quantitative guarantees for properties analogous to their source authorization and data isolation.
+
+\subsection{Alignment and structural security}\label{subsec:alignment}
+
+Behavioral safety (RLHF~\cite{ouyang2022training}, constitutional AI~\cite{bai2022constitutional}) addresses \emph{what the agent wants to do}. Structural security (our contribution) addresses \emph{what the agent is allowed to do}. These are complementary: alignment reduces $p(\text{injection succeeds})$; structural security bounds the consequence of successful injection. The mature security posture requires both.
+
+%% ================================================================
+%%  Section 7
+%% ================================================================
+\section{Limitations}\label{sec:limitations}
+
+\subsection{Semantic attacks}\label{subsec:semantic}
+The CapabilityGate constrains \emph{which tools} are called with \emph{what data}, but cannot evaluate the \emph{semantic appropriateness} of content generated within those constraints.
+
+\subsection{Taint tracking trade-offs}\label{subsec:taint-tradeoff}
+\textbf{False negatives.} LLM reasoning chains may synthesize external data undetectably by content-level fingerprinting. CausalTaintTracker mitigates this but resets per batch, leaving a cross-batch gap.
+
+\textbf{False positives.} CausalTaintTracker blocks all external actions in a batch once any external data is observed---including legitimate operations. This tension is fundamental: precise tracking through the LLM's opaque reasoning would require interpretability capabilities that do not exist.
+
+\subsection{Cross-batch context contamination}\label{subsec:crossbatch}
+External data from prior batches may persist in session history and influence LLM behavior in subsequent locally-trusted batches. CausalTaintTracker could persist across batches at the cost of severe usability penalties.
+
+\subsection{Policy completeness}\label{subsec:policy}
+Tool classification ($\mathcal{T}_R$, $\mathcal{T}_X$, $\mathcal{T}_U$) and \texttt{EVENT\_TOOL\_GRANTS} are manually curated. Misclassification weakens the real-world guarantee without affecting formal correctness.
+
+\subsection{Formal verification}\label{subsec:formalverif}
+Supplementary Notes provide hand proofs. Machine-verified proofs (TLA+, Coq, Lean) remain future work. The CapabilityGate's deterministic nature makes it amenable to such verification.
+
+%% ================================================================
+%%  Section 8
+%% ================================================================
+\section{Conclusion and Outlook}\label{sec:conclusion}
+
+The Agent Authority Problem reveals that the ambient authority model cannot secure systems whose intent emerges from---and can be corrupted by---the data they process. This property holds for any architecture where data and instructions share a processing channel, encompassing all current LLM-based agent systems.
+
+Our dual-gate event-driven capability architecture demonstrates that this problem can be circumvented by replacing the authorization model. The EventInjectionGate constrains what enters the system; the CapabilityGate constrains what the LLM can do. Together they transform agent security from a single-barrier model (dependent on LLM injection resistance) to a multi-barrier model with quantifiable probability bounds (Theorem~\ref{thm:main}) and deterministic zero-probability guarantees for untrusted sources (Proposition~\ref{prop:trust-zero}) and Rule-of-Two-enforced batches (Theorem~\ref{thm:r2}).
+
+Three challenges remain. The cross-batch contamination gap demands session-level taint management. The semantic attack boundary marks the interface between structural security and behavioral safety. And empirical validation against standard benchmarks (Section~\ref{subsec:eval}) will quantify the bound's tightness and the false positive/negative rates of taint tracking.
+
+The class of architectures providing event provenance, cascade enforcement, batch atomicity, trust-level tool restriction, and deterministic gating represents a necessary direction for autonomous agents in high-stakes domains. The critical requirement is not any specific implementation, but the abandonment of ambient authority as the organizing principle for agent security.
+
+\bibliography{sn-bibliography}
+
+\end{document}
