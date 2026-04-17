@@ -77,8 +77,9 @@
 \newtheorem{theorem}{Theorem}%  meant for continuous numbers
 %%\newtheorem{theorem}{Theorem}[section]% meant for sectionwise numbers
 %% optional argument [theorem] produces theorem numbering sequence instead of independent numbers for Proposition
-\newtheorem{proposition}[theorem]{Proposition}% 
+\newtheorem{proposition}[theorem]{Proposition}%
 %%\newtheorem{proposition}{Proposition}% to get separate numbers for theorem and proposition etc.
+\newtheorem{corollary}[theorem]{Corollary}%
 
 \theoremstyle{thmstyletwo}%
 \newtheorem{example}{Example}%
@@ -283,13 +284,7 @@ Trust level & Criteria & Tool grant policy & Security consequence \\
 \end{tabular}
 \end{table}
 
-\begin{proposition}[Trust-Level Zero Guarantee]\label{prop:trust-zero}
-For \textsc{Remote\_Open} events, no external-action tool is granted ($\alpha_X=0$). Since exfiltration requires transmitting data externally, exfiltration is structurally impossible regardless of injection success rate, Rule of Two status, or taint evasion capability:
-\begin{equation}
-  \Pr[\text{Exfil} \mid \text{Remote\_Open}] \leq p \cdot \min(\alpha_R, 0) \cdot (1-R_2) \cdot q = 0.
-\end{equation}
-This guarantee is strictly stronger than Theorem~\ref{thm:r2} (Rule of Two), which requires $R_2 = 1$. The trust-level guarantee holds regardless of~$R_2$.
-\end{proposition}
+\paragraph{Trust-Level Zero Guarantee (informal).} For \textsc{Remote\_Open} events, the CapabilityIssuer grants no external-action tool. Since exfiltration requires transmitting data externally and no external-send tool is available, exfiltration is structurally impossible for this trust class---regardless of injection success, Rule-of-Two status, or taint evasion capability. This guarantee is unconditional: it depends only on the deterministic tool-grant policy of Table~\ref{tab:trust}. We formalize this as Corollary~\ref{cor:trust-zero} after introducing the probabilistic framework in Section~\ref{subsec:results}.
 
 \subsection{Three-layer CapabilityGate}\label{subsec:capgate}
 
@@ -320,7 +315,7 @@ Taint tracking operates in three stages:
 
 \paragraph{Malicious supply-chain skills (12\% of ClawHub compromised).} Under event-scoped capability authority, \textbf{token scoping} (Layer~1) restricts the skill's available tools to those relevant to its declared function, and \textbf{taint tracking} (Layer~2) registers all skill-introduced data as \textsc{External}, preventing its use as arguments to sensitive tools.
 
-\paragraph{CVE-2026-25253: cross-site WebSocket hijacking RCE.} Under our architecture, an unauthenticated WebSocket message is classified as \textsc{Remote\_Open}. By Proposition~\ref{prop:trust-zero}, $\alpha_X = 0$ and $\Pr[\text{Exfil}] = 0$---the RCE chain is structurally impossible because code execution tools are never granted for untrusted sources.
+\paragraph{CVE-2026-25253: cross-site WebSocket hijacking RCE.} Under our architecture, an unauthenticated WebSocket message is classified as \textsc{Remote\_Open}. By the Trust-Level Zero Guarantee (Corollary~\ref{cor:trust-zero}), no external-action tool is granted, so $\Pr[\text{Exfil}] = 0$---the RCE chain is structurally impossible because code execution tools are never granted for untrusted sources.
 
 \paragraph{Persistent hallucination loops and intent drift.} \textbf{Automatic privilege decay} ensures each batch receives a fresh token with 300-second TTL. Previous context errors do not accumulate privileges.
 
@@ -337,13 +332,21 @@ We consider an adversary who can embed adversarial instructions in data sources 
 
 \subsection{Main results}\label{subsec:results}
 
-\begin{theorem}[Multi-Barrier Exfiltration Bound]\label{thm:main}
+\begin{theorem}[Residual-Risk Exfiltration Bound]\label{thm:main}
 In an agent system with $n$ tools where each event batch is authorized a token of at most $k$ tools, the probability that an adversary successfully exfiltrates sensitive data through a single batch is bounded by:
 \begin{equation}\label{eq:main}
   \Pr[\text{Exfil}(b)] \leq p \cdot \min\!\left(\frac{kn_R}{n},\, \frac{kn_X}{n}\right) \cdot (1 - R_2) \cdot q
 \end{equation}
-where each factor corresponds to a distinct architectural barrier: $p$~(injection success), $kn_R/n$ and~$kn_X/n$ (tool visibility---union bounds on the probability of sensitive-read and external-send tools being granted; these arise from the same token draw and are not probabilistically independent, but represent architecturally distinct constraints), $R_2$~(Rule of Two: zeroes the bound when enforced), $q$~(cross-batch taint evasion). Full proof in Supplementary Notes.
+where $p$ is the injection success probability, $kn_R/n$ and $kn_X/n$ are union bounds on the probability of sensitive-read and external-send tools being granted in the token (drawn jointly from the same token and therefore not probabilistically independent; the $\min$ reflects the tighter of the two union bounds rather than a product of independent barriers), $R_2$ is the Rule-of-Two indicator (zeroes the bound when enforced), and $q$ is the cross-batch taint evasion probability. Full proof in Supplementary Notes.
 \end{theorem}
+
+\begin{corollary}[Trust-Level Zero Guarantee]\label{cor:trust-zero}
+For any event batch $b$ classified as \textsc{Remote\_Open}, the CapabilityIssuer grants no external-action tool, so $n_X^{\text{eff}}(b) = 0$ and hence $\alpha_X(b) = 0$. Applying Theorem~\ref{thm:main}:
+\begin{equation}
+  \Pr[\text{Exfil}(b) \mid b \in \textsc{Remote\_Open}] \leq p \cdot \min\!\left(\tfrac{kn_R}{n},\, 0\right) \cdot (1-R_2) \cdot q = 0.
+\end{equation}
+This guarantee is unconditional in $p$, $q$, and $R_2$; it depends only on the deterministic tool-grant policy of Table~\ref{tab:trust}.
+\end{corollary}
 
 \begin{theorem}[Session-Level Bound]\label{thm:session}
 Over $B$ batches: $\Pr[\exists\, b : \text{Exfil}(b)] \leq 1 - (1-\varepsilon)^B$ where $\varepsilon$ is the per-batch bound from Theorem~\ref{thm:main}. Under ambient authority: $\Pr[\exists\, b : \text{Exfil}(b)] \geq 1-(1-p)^B \to 1$ as $B \to \infty$.
@@ -354,7 +357,7 @@ When $R_2 = 1$: $\Pr[\text{Exfil}(b)] = 0$, regardless of $p$ or~$q$.
 \end{theorem}
 
 \begin{theorem}[Causal Taint Irrevocability]\label{thm:taint}
-The causal taint sequence is monotonically non-decreasing ($\tau_i \leq \tau_j$ for $i \leq j$). Once \textsc{External} data is observed, within-batch taint evasion is exactly zero ($q_{\text{within}} = 0$).
+Within a single batch, the causal taint sequence is monotonically non-decreasing ($\tau_i \leq \tau_j$ for $i \leq j$). Consequently, once \textsc{External} data is observed within a batch, within-batch taint evasion is exactly zero ($q_{\text{within}} = 0$). The statement is restricted to a single batch; cross-batch residuals are addressed separately in Section~\ref{subsec:crossbatch}.
 \end{theorem}
 
 \begin{theorem}[Bound Integrity]\label{thm:integrity}
@@ -366,11 +369,19 @@ Theorem~\ref{thm:main} quantifies only the CapabilityGate's contribution. Additi
 \begin{itemize}
   \item EventInjectionGate: per-source rate limiting (10--200 events/s), payload size cap (16--131\,KB), cascade depth hard limit~(20), event type whitelist
   \item Path scoping: tool operations restricted to \texttt{granted\_paths} globs derived from event payload
-  \item Trust-level tool restriction: \textsc{Remote\_Open} events have $\alpha_X = 0$ (Section~\ref{subsec:trust}), yielding $\Pr[\text{Exfil}] = 0$ independent of the bound's other factors
+  \item Trust-level tool restriction: \textsc{Remote\_Open} events have $\alpha_X = 0$ (Corollary~\ref{cor:trust-zero}), yielding $\Pr[\text{Exfil}] = 0$ independent of the bound's other factors
   \item Context compaction: semantic compression of long session histories, reducing cross-batch contamination surface
 \end{itemize}
 The actual system is strictly safer than the bound suggests.
 \end{remark}
+
+\paragraph{Hierarchy of security guarantees.} The results above establish two qualitatively distinct classes of guarantee, and the architecture's practical security rests primarily on the first:
+
+\emph{Deterministic (primary) guarantees.} Theorem~\ref{thm:r2} drives $\Pr[\text{Exfil}(b)]$ to exactly zero whenever $R_2 = 1$, and Corollary~\ref{cor:trust-zero} does the same whenever the batch is \textsc{Remote\_Open}. Both hold unconditionally in $p$ and $q$, and neither depends on any statistical assumption about the adversary---they follow from deterministic properties of the tool-grant policy and the Rule-of-Two check, each of which is enforced by LLM-independent code (Theorem~\ref{thm:integrity}).
+
+\emph{Probabilistic (residual) bound.} Theorem~\ref{thm:main} characterizes residual risk in the regime where neither deterministic guarantee applies---for instance, a \textsc{Local\_Trusted} batch whose granted tools span $\mathcal{T}_U$, $\mathcal{T}_R$, and $\mathcal{T}_X$ because of a tool-classification error that defeats the Rule-of-Two check. In that degraded regime the bound records a single-factor tool-visibility reduction $\min(\alpha_R, \alpha_X)$ and an independent cross-batch taint-evasion factor $q$, rather than two independent multiplicative barriers. The bound should therefore be read as quantifying residual risk when the primary guarantees are bypassed or misconfigured, not as the main security property of the system.
+
+The ``multi-barrier'' framing in the paper refers to the full architecture---EventInjectionGate, trust-level restriction, Rule of Two, token scoping, path scoping, and taint tracking---each of which operates on a distinct channel. Equation~\eqref{eq:main} aggregates only the CapabilityGate-internal portion of these barriers that admits a closed-form probabilistic analysis.
 
 \subsection{Concrete instantiation}\label{subsec:instantiation}
 
@@ -447,7 +458,7 @@ Our architecture provides verifiable properties mapping to specific regulatory r
 
 \subsection{Prompt injection defenses}\label{subsec:pi-defenses}
 
-Existing defenses fall into three categories. \textbf{Detection-based approaches} (pattern matching, classifier models, perplexity analysis~\cite{chhabra2025agentic}) face the fundamental limitation that adversarial encodings are open-ended. \textbf{Instruction hierarchy approaches}~\cite{wallace2024instruction} establish precedence among instruction sources but depend on LLM compliance under adversarial pressure. \textbf{Architectural separation approaches}, most notably CaMeL~\cite{debenedetti2025camel}, introduce Privileged/Quarantined LLM separation and data provenance tracking. Our work extends CaMeL in three ways: (1)~identifying EventBus as a structural prerequisite for capability security; (2)~dual-layer taint tracking (content-level + causal-level) versus CaMeL's single-layer provenance; (3)~closed-form theoretical bounds on attack probability (Theorem~\ref{thm:main}), complementing CaMeL's empirical evaluation (67\% task success with provable security on AgentDojo). Additionally, CaMeL's dual-LLM architecture incurs $2.7$--$2.8\times$ token overhead; our CapabilityGate is pure deterministic code requiring zero additional LLM calls.
+Existing defenses fall into three categories. \textbf{Detection-based approaches} (pattern matching, classifier models, perplexity analysis~\cite{chhabra2025agentic}) face the fundamental limitation that adversarial encodings are open-ended. \textbf{Instruction hierarchy approaches}~\cite{wallace2024instruction} establish precedence among instruction sources but depend on LLM compliance under adversarial pressure. \textbf{Architectural separation approaches}, most notably CaMeL~\cite{debenedetti2025camel}, introduce Privileged/Quarantined LLM separation and data provenance tracking. Our work extends CaMeL in three ways: (1)~identifying EventBus as a structural prerequisite for capability security; (2)~dual-layer taint tracking (content-level + causal-level) versus CaMeL's single-layer provenance; (3)~closed-form theoretical bounds on attack probability (Theorem~\ref{thm:main}), complementing CaMeL's empirical evaluation (77\% task success with provable security on AgentDojo, v2, June 2025). Additionally, CaMeL's dual-LLM architecture incurs $2.7$--$2.8\times$ token overhead; our CapabilityGate is pure deterministic code requiring zero additional LLM calls.
 
 \subsection{Capability-based security}\label{subsec:caps}
 
@@ -558,7 +569,7 @@ The architecture is implemented in Python as part of the ShadowClaw project (55 
 
 The Agent Authority Problem reveals that the ambient authority model cannot secure systems whose intent emerges from---and can be corrupted by---the data they process. This property holds for any architecture where data and instructions share a processing channel, encompassing all current LLM-based agent systems.
 
-Our dual-gate event-driven capability architecture demonstrates that this problem can be circumvented by replacing the authorization model. The EventInjectionGate constrains what enters the system; the CapabilityGate constrains what the LLM can do. Together they transform agent security from a single-barrier model (dependent on LLM injection resistance) to a multi-barrier model with quantifiable probability bounds (Theorem~\ref{thm:main}) and deterministic zero-probability guarantees for untrusted sources (Proposition~\ref{prop:trust-zero}) and Rule-of-Two-enforced batches (Theorem~\ref{thm:r2}).
+Our dual-gate event-driven capability architecture demonstrates that this problem can be circumvented by replacing the authorization model. The EventInjectionGate constrains what enters the system; the CapabilityGate constrains what the LLM can do. Together they transform agent security from a single-barrier model (dependent on LLM injection resistance) to a layered architecture whose primary security rests on two deterministic zero-probability guarantees---for untrusted sources (Corollary~\ref{cor:trust-zero}) and for Rule-of-Two-enforced batches (Theorem~\ref{thm:r2})---with a probabilistic residual-risk bound (Theorem~\ref{thm:main}) characterizing the degraded regime where neither deterministic guarantee applies.
 
 Three challenges remain. The cross-batch contamination gap demands session-level taint management. The semantic attack boundary marks the interface between structural security and behavioral safety. And empirical validation against standard benchmarks (Section~\ref{subsec:eval}) will quantify the bound's tightness and the false positive/negative rates of taint tracking.
 

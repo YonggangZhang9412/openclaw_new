@@ -148,7 +148,7 @@ Since $\Pr[\text{Exfil}(b)] \geq 0$ (probability axiom) and $\Pr[\text{Exfil}(b)
 
 ## 5. Theorem 4: CausalTaintTracker Monotonicity
 
-**Theorem 4 (Causal Taint Irrevocability).** $\forall\, 0 \leq i \leq j \leq m$: $\tau_i \leq \tau_j$.
+**Theorem 4 (Causal Taint Irrevocability, within a single batch).** Fix an event batch $b$ with reasoning steps indexed $0, 1, \ldots, m$, and let $(\tau_0, \tau_1, \ldots, \tau_m)$ be the within-batch causal taint sequence produced by $\tau_k = \max(\tau_{k-1}, \text{taint}(t_k))$. Then $\forall\, 0 \leq i \leq j \leq m$: $\tau_i \leq \tau_j$. The statement is restricted to a single batch; cross-batch residuals are not covered by this monotonicity property.
 
 **Proof.** For any $k \in \{1, \ldots, m\}$:
 
