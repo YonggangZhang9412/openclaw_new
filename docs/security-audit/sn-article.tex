@@ -134,7 +134,7 @@ In early 2026, OpenClaw---which grants agents persistent access to email, calend
 \begin{itemize}
   \item \textbf{Adversarial exploitation.} Approximately 12\% of skills in ClawHub, OpenClaw's community marketplace, were malicious---disguised as legitimate tools while installing keyloggers or exfiltrating credentials~\cite{sangfor2026openclaw}. CVE-2026-25253 (CVSS 8.8) enabled one-click remote code execution through cross-site WebSocket hijacking~\cite{mitre2026cve25253}. Censys identified 21,639 publicly exposed instances~\cite{censys2026openclaw}.
   \item \textbf{Non-adversarial cascading failures.} Users reported persistent hallucination loops---where an agent's erroneous belief, reinforced through accumulated context, propagated across subsequent execution cycles without attacker involvement~\cite{openclaw2026advisories}.
-  \item \textbf{Intent drift.} Beyond approximately 100 messages, instruction-following capability degraded significantly~\cite{openclaw2026advisories}.
+  \item \textbf{Intent drift.} Beyond approximately 100 messages, instruction-following capability degraded significantly~\cite{openclaw2026advisories}. The agent's behavior gradually diverged from the user's original intent---not through malice, but through the natural entropy of long context windows.
   \item \textbf{Over-authorization.} One user's agent inadvertently initiated a dispute with an insurance company; another sent over 500 unsolicited iMessages~\cite{openclaw2026advisories}. These are not bugs but predictable consequences of granting ambient authority to a system whose ``intent'' is stochastic.
 \end{itemize}
 
@@ -484,6 +484,74 @@ Tool classification ($\mathcal{T}_R$, $\mathcal{T}_X$, $\mathcal{T}_U$) and \tex
 
 \subsection{Formal verification}\label{subsec:formalverif}
 Supplementary Notes provide hand proofs. Machine-verified proofs (TLA+, Coq, Lean) remain future work. The CapabilityGate's deterministic nature makes it amenable to such verification.
+
+%% ================================================================
+%%  Methods (after main text, before Conclusion per Nature convention)
+%% ================================================================
+\section{Methods}\label{sec:methods}
+
+\subsection{Event model and EventBus}\label{subsec:meth-eventbus}
+
+All system triggers are normalized into a typed Event---a frozen (immutable) dataclass with fields: \texttt{id} (12-char hex UUID), \texttt{source} (originating module), \texttt{type} (event class), \texttt{priority} (CRITICAL $>$ HIGH $>$ NORMAL $>$ LOW), \texttt{payload} (event-specific dictionary), \texttt{origin\_chain} (immutable provenance tuple), and \texttt{cascade\_depth} (auto-incremented by framework; hard limit: 20).
+
+The EventBus receives events through registered EventSources (8~source types: Timer, Cron, FileWatch, ProcessWatch, NetworkWatch, Discovery, SkillEvent, Custom), applies the EventInjectionGate (per-source policy: event type whitelist, sliding-window rate limiting, payload size cap, cascade depth check; CRITICAL priority requires unforgeable EscalationToken), routes through EventFilter (debounce 0.5\,s, priority routing) into a priority queue (capacity: 10,000; overflow: lowest-priority eviction). EventConsumer dequeues batches (2\,s window, max 20 events).
+
+\subsection{Device authentication}\label{subsec:meth-device}
+
+Remote devices authenticate via HMAC challenge-response: the server generates a nonce and timestamp; the client computes $\text{HMAC}(\textit{secret},\; \textit{nonce} \| \textit{device\_id} \| \textit{timestamp})$ using a 32-byte per-device random secret; the server verifies using constant-time comparison. For unknown device IDs, a dummy secret of equal length is used to ensure identical computation paths, preventing timing-based device enumeration. Clock skew tolerance is 300 seconds; nonces are single-use. Authenticated devices are assigned a \texttt{DeviceScope} (\textsc{Admin}/\textsc{Cli}/\textsc{Mobile}), which maps to an \texttt{InjectionPolicy} determining rate limits, payload caps, and allowed event types.
+
+\subsection{Trust classification}\label{subsec:meth-trust}
+
+The trust classification algorithm inspects \texttt{event.source} and \texttt{event.origin\_chain}:
+\begin{itemize}
+  \item \textbf{\textsc{Local\_Trusted}}: 10 internal sources (timer, cron, file, process, network, node, discovery, contract, task, skill\_source)
+  \item \textbf{\textsc{Remote\_Verified}}: authenticated remote devices (verified by HMAC handshake)
+  \item \textbf{\textsc{Remote\_Open}}: custom events without internal module markers in \texttt{origin\_chain}
+\end{itemize}
+Trust level determines tool grants via \texttt{EVENT\_TOOL\_GRANTS} mapping. For \textsc{Remote\_Open}: high-risk tools (\texttt{bash}, \texttt{run\_command}, \texttt{daemon\_restart}, \texttt{send\_email}, \texttt{curl}, \texttt{wget}) are removed.
+
+\subsection{CapabilityIssuer: event-to-token mapping}\label{subsec:meth-issuer}
+
+For each event batch, the CapabilityIssuer performs:
+\begin{enumerate}
+  \item \textbf{Trust classification} $\rightarrow$ determines base tool set
+  \item \textbf{Tool grant selection} $\rightarrow$ \texttt{EVENT\_TOOL\_GRANTS[event\_type]} intersected with trust-level restrictions
+  \item \textbf{Path inference} $\rightarrow$ \texttt{event.payload["path"]} resolved to absolute path, parent directory granted via glob
+  \item \textbf{Rule-of-Two evaluation} $\rightarrow$ if granted tools span $\mathcal{T}_U \cap \mathcal{T}_R \cap \mathcal{T}_X$ simultaneously, external-action tools removed
+  \item \textbf{Token construction} $\rightarrow$ frozen CapabilityToken with \texttt{granted\_tools}, \texttt{denied\_tools}, \texttt{granted\_paths}, \texttt{ttl}~(300\,s), Rule-of-Two flags
+\end{enumerate}
+
+\subsection{CapabilityGate: three-check verification}\label{subsec:meth-gate}
+
+For each tool call $(t, \text{args})$:
+\begin{itemize}
+  \item \textbf{Check 1 (Token)}: $t_{\text{now}} > \tau.\text{issued\_at} + \tau.\text{ttl}$ $\to$ DENY;\; $t \notin \tau.\text{granted\_tools}$ $\to$ DENY;\; $t \in \tau.\text{denied\_tools}$ $\to$ DENY
+  \item \textbf{Check 2 (Taint)}: for each param value, query TaintStore (SHA-256 fingerprint $\to$ dict lookup $\to$ substring match $\to$ boundary marker detection); if $\text{taint} > \text{policy.max\_taint}$ $\to$ DENY
+  \item \textbf{Check 3 (Structural)}: $\text{path} \notin \text{granted\_paths}$ $\to$ DENY;\; $\text{call\_count} \geq \text{max\_per\_round}$ $\to$ DENY;\; causal Rule of Two violated $\to$ DENY
+\end{itemize}
+
+\subsection{External content wrapping}\label{subsec:meth-wrap}
+
+The external content wrapping procedure operates as follows:
+\begin{enumerate}
+  \item Generate \texttt{marker\_id = secrets.token\_hex(8)} (16 hex chars, $2^{64}$ possibilities)
+  \item Sanitize existing boundary markers: replace with \texttt{[[MARKER\_SANITIZED]]}
+  \item Normalize Unicode homoglyphs: full-width \texttt{<} (U+FF1C) $\to$ ASCII \texttt{<}, CJK \texttt{<} (U+3008) $\to$ \texttt{<} (13 invisible character classes stripped)
+  \item Wrap: \texttt{<<<EXTERNAL\_UNTRUSTED\_CONTENT id="\{marker\_id\}">>>} \ldots\ \texttt{<<<//EXTERNAL\_UNTRUSTED\_CONTENT>>>}
+  \item Register content + taint level in TaintStore (SHA-256 fingerprint + substring extraction for content ${>}5$\,KB)
+\end{enumerate}
+
+\subsection{TaintStore}\label{subsec:meth-taintstore}
+
+Registration: \texttt{TaintStore.register(content, taint\_level, origin\_tool)} computes SHA-256 fingerprint (first 16 hex chars), extracts email/URL/path substrings for large content, stores with TTL 600\,s. Capacity: 10,000 records, LRU eviction.
+
+Query: short-circuit strategy---boundary markers $\to$ fingerprint match $\to$ substring match $\to$ None (fail-open).
+
+CausalTaintTracker: $\tau_0 = \text{USER}$;\; $\tau_k = \max(\tau_{k-1}, \text{taint}(t_k))$. Monotonic (Theorem~\ref{thm:taint}). Reset per batch.
+
+\subsection{Code and data availability}\label{subsec:meth-code}
+
+The architecture is implemented in Python as part of the ShadowClaw project (55 tools across 16 module categories). Source code is available at [repository URL]; specific module paths are documented in the repository's README. Tool enumeration is provided in Supplementary Table~1.
 
 %% ================================================================
 %%  Section 8
